@@ -1,0 +1,6 @@
+*auto-generated*
+build/*
+result/*
+test/test_runner.*
+test/valgrind_runner.*
+RELEASE

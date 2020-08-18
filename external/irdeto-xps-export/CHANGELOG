@@ -1,0 +1,44 @@
+Entries are sorted chronologically from oldest to youngest within each release,
+releases are sorted from youngest to oldest.
+
+version 7.0.0
+- Removed the exporting of reference frames for HEVC, reference frames will be managed at application side for HEVC
+
+version 6.0.0
+- Upgraded to new FFmpeg version 3.4
+
+version 5.0.0
+- Now exporting of reference frame in separate header
+- New function is shared by two codecs AVC and HEVC
+- New function for exporting ref frames should be called at application side
+
+version 4.0.1
+- Added support of Centos 6.x
+
+version 4.0.0
+- Aligned with latest HEVC clean user story, removed lots of unused export variables
+- Splited import hevc function into meta data and reference frame, they will be called from x265 instead of embedder
+
+version 3.0.0
+- Changed implementation to header only project with small shared library which handles memory management
+- Added validation of library context to handle unintialized field and memory corruption from ffmpeg
+
+version 2.0.0
+- Added paramter input_size to allow user specify the range of valid data that needs
+  to be exported
+
+version 1.2.0
+- Added mode parameters, currently 3 modes are supported: raw, base64 and lz4
+
+version 1.1.0
+- Reimplemented this library based on libb64
+
+version 1.0.0
+- Reimplemented this library based on glib base64
+
+version 0.1.0
+- Put implementation in separate source file cause library is big and we have
+  multiple definitions plus performance issues
+
+version 0.0.9
+- Initial implementaion of irdeto-export-codec helper functions

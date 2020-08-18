@@ -1,0 +1,37 @@
+#!/usr/bin/env groovy
+
+node('slave-docker-native-build-1') {
+    properties([[ $class: 'BuildDiscarderProperty', strategy:[$class: 'LogRotator', numToKeepStr: '20']]])
+
+    stage('Checkout') {
+        checkout scm
+    }
+
+    stage('Build') {
+
+         def ARTIFACTORY = 'n'
+        def BUILD_TYPE = 'debug'
+        if (env.BRANCH_NAME =~ 'master') {
+            ARTIFACTORY = 'y'
+            BUILD_TYPE = 'release'
+        }
+
+        sh "irdeto-builder --build_number ${BUILD_ID} --build_type ${BUILD_TYPE} --run_lcov n --run_doxygen n --run_cppcheck n --run_valgrind n --run_artifactory ${ARTIFACTORY} --run_coverity no"
+    }
+
+    stage('Reports'){
+
+    }
+
+    stage('Docs'){
+
+    }
+
+    stage('Archive') {
+        archive 'result/el?/*.rpm'
+    }
+
+    stage('Cleanup') {
+
+    }
+}

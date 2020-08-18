@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@gitlab.emea.irdeto.com:ott-watermark/irdeto-xps-export.git
+	branch = mpeg2sandbox
+	commit = e94fe518997de709dcb9cbb1be57d55f68d3d534
+	parent = dc528218b1ce53e99a933d40b6cd5a8b0f3fce8c
+	method = merge
+	cmdver = 0.4.0

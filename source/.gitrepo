@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://git.ffmpeg.org/ffmpeg.git
+	branch = n3.4
+	commit = 01e291a592452f27b3a4e811536aaaf94096e244
+	parent = 7114d5677749ce91674a2511838859acf072d585
+	cmdver = 0.3.1
