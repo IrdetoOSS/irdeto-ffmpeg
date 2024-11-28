@@ -1387,14 +1387,14 @@ enum AVPacketSideDataType {
      */
     AV_PKT_IRDETO_PPS,
 
-    /**
-     * @brief Uncompressed Y buffer after reencoded.
-     * @note  This is the decoded and uncompressed Y component of the reencoded frame,
-     *        its stride aligns with the input frame.
-     * @warning The memory mangement is done internally, caller should not release this
-     *          buffer manually.
-     */
-    AV_PKT_REENCODED_UNCOMPRESSED_Y_BUF
+//  /**
+//   * @brief Uncompressed Y buffer after reencoded.
+//   * @note  This is the decoded and uncompressed Y component of the reencoded frame,
+//   *        its stride aligns with the input frame.
+//   * @warning The memory mangement is done internally, caller should not release this
+//   *          buffer manually.
+//   */
+//  AV_PKT_REENCODED_UNCOMPRESSED_Y_BUF
 };
 
 #define AV_PKT_DATA_QUALITY_FACTOR AV_PKT_DATA_QUALITY_STATS //DEPRECATED

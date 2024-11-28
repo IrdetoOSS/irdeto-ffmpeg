@@ -45,6 +45,7 @@ HEADERS = adler32.h                                                     \
           imgutils.h                                                    \
           intfloat.h                                                    \
           intreadwrite.h                                                \
+          ir_wm_info.h                                                  \
           lfg.h                                                         \
           log.h                                                         \
           macros.h                                                      \
@@ -123,6 +124,7 @@ OBJS = adler32.o                                                        \
        imgutils.o                                                       \
        integer.o                                                        \
        intmath.o                                                        \
+       ir_wm_info.o                                                     \
        lfg.o                                                            \
        lls.o                                                            \
        log.o                                                            \

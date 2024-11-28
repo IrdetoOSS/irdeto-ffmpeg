@@ -18,6 +18,14 @@
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+#include <stdint.h>
+#include <float.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <x264.h>
+#include "irxps/ir_xps_common.h"
 
 #include "libavutil/eval.h"
 #include "libavutil/internal.h"
@@ -28,20 +36,11 @@
 #include "libavutil/intreadwrite.h"
 #include "avcodec.h"
 #include "internal.h"
+#include "ir_preserve_nonvcl.h"
 
 #if defined(_MSC_VER)
 #define X264_API_IMPORTS 1
 #endif
-
-#include <x264.h>
-#include <float.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-
-#include <irxps/ir_xps_common.h>
 
 typedef struct X264Context {
     AVClass        *class;
@@ -98,6 +97,7 @@ typedef struct X264Context {
 
     int enable_irdeto_exports;
     int irdeto_pps_id;
+    int irdeto_non_vcl;
 } X264Context;
 
 static void X264_log(void *p, int level, const char *fmt, va_list args)
@@ -114,23 +114,6 @@ static void X264_log(void *p, int level, const char *fmt, va_list args)
 
     av_vlog(p, level_map[level], fmt, args);
 }
-
-/**
-* @brief check if given nal_unit_type_e value is x264 vlc
-*/
-static int is_x264_vcl(int nal_type)
-{
-    return (nal_type >= NAL_SLICE && nal_type <= NAL_SLICE_IDR) ? 1 : 0;
-}
-
-/**
-* @brief check if given nal_unit_type_e value is x264 pps
-*/
-static int is_x264_pps(int nal_type)
-{
-    return (nal_type == NAL_PPS) ? 1 : 0;
-}
-
 
 static int encode_nals(AVCodecContext *ctx, AVPacket *pkt,
                        const x264_nal_t *nals, int nnal)
@@ -306,136 +289,12 @@ static void reconfig_encoder(AVCodecContext *ctx, const AVFrame *frame)
     }
 }
 
-static int find_nal(uint8_t **ptr, uint8_t *end_ptr, int *len, int code_min, int code_max)
-{
-    int result = -1;
-    uint8_t *p = *ptr;
-    int i, start = -1;
-    int code = -1; // nal_unit_type
-    for (i = 0; i < end_ptr - p - 1; i++)
-    {
-        if ((p[i + 0] == 0x0 && p[i + 1] == 0x0 && p[i + 2] == 0x1) || (i == end_ptr - p - 2))
-        {
-            if (start >= 0)
-            {
-                int size = i - start;
-                if (i == end_ptr - p - 2)
-                {
-                    size += 3;
-                }
-
-                if (code >= code_min &&	code <= code_max)
-                {
-                    (*ptr) = p + start;
-                    *len = size;
-                    result = 0;
-                    break;
-                }
-            }
-            code = -1;
-            if (i < end_ptr - p - 2)
-            {
-                code = p[i + 3] & 0x1f;
-            }
-            start = i;
-        }
-    }
-    return result;
-}
-
-static int merge_pkt(ir_xps_context* xps_context, AVPacket *pkt)
-{
-    int result = 1;
-
-    do
-    {
-        if (NULL == xps_context)
-        {
-            break;
-        }
-
-        AVPacket *pkt_src = (AVPacket *)xps_context->avc_meta.pkt;
-
-        uint8_t *src_ptr     = pkt_src->data;
-        uint8_t *src_cur_ptr = pkt_src->data;
-        uint8_t *src_end_ptr = src_ptr + pkt_src->size - 1;
-        uint8_t *enc_ptr     = pkt->data;
-        uint8_t *enc_cur_ptr = pkt->data;
-        uint8_t *enc_end_ptr = enc_ptr + pkt->size - 1;
-
-        uint8_t *dst_buf = malloc(pkt_src->size + pkt->size + 1);
-        uint8_t *dst_ptr = dst_buf;
-        int len;
-
-        do
-        {
-            /* copy up to VCL from src packet */
-            if (find_nal(&src_cur_ptr, src_end_ptr, &len, 1, 5) != 0)
-            {
-                break;
-            }
-            memcpy(dst_ptr, src_ptr, src_cur_ptr - src_ptr);
-            dst_ptr += src_cur_ptr - src_ptr;
-
-            /* copy PPS from re-encoded */
-            if (find_nal(&enc_cur_ptr, enc_end_ptr, &len, 8, 8) != 0)
-            {
-                break;
-            }
-            *dst_ptr++ = 0x0; //zero_byte mandatory for sps and pps.
-            memcpy(dst_ptr, enc_cur_ptr, len);
-            dst_ptr += len;
-
-            /* copy VCL's from re-encoded */
-            while (find_nal(&enc_cur_ptr, enc_end_ptr, &len, 1, 5) == 0)
-            {
-                memcpy(dst_ptr, enc_cur_ptr, len);
-                dst_ptr += len;
-                enc_cur_ptr += len;
-            }
-
-            /* copy any suffix nals from src packet, skip any filler nals */
-            /* prefix: 6..9, 14..18, slice: 1..5, suffix: 0, 10..12, 20..31, 13 and 19  skipped too */
-            while (find_nal(&src_cur_ptr, src_end_ptr, &len, 0, 31) == 0)
-            {
-                int nal_unit_type = (*(src_cur_ptr + 3)) & 0x1f;
-                if (nal_unit_type == 0 || (nal_unit_type >= 10 && nal_unit_type < 12) || nal_unit_type > 19) {
-                    memcpy(dst_ptr, enc_cur_ptr, len);
-                    dst_ptr += len;
-                }
-                src_cur_ptr += len;
-            }
-
-            /* copy to pkt */
-            int new_size = dst_ptr - dst_buf;
-            if (new_size > pkt->size)
-            {
-                av_grow_packet(pkt, new_size - pkt->size);
-            }
-            else
-            {
-                av_shrink_packet(pkt, new_size);
-            }
-            memcpy(pkt->data, dst_buf, new_size);
-
-            result = 0;
-        }
-        while(0);
-
-        free(dst_buf);
-
-    } while(0);
-
-    return result;
-}
-
 static int convert_pix_fmt(enum AVPixelFormat pix_fmt);
 
 static void adjust_params_for_watermarking(
         x264_param_t* param,
         const AVCodecContext *ctx,
-        const X264Context* x4,
-        ir_xps_context* xps) {
+        const X264Context* x4) {
     param->rc.i_rc_method = X264_RC_CQP;
     param->rc.f_ip_factor = 1;
     param->rc.f_pb_factor = 1;
@@ -497,7 +356,7 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
         }
 
         ir_xps_context *xps_context = (ir_xps_context *) frame->opaque;
-        adjust_params_for_watermarking(&x4->params, ctx, x4, xps_context);
+        adjust_params_for_watermarking(&x4->params, ctx, x4);
 
         x4->enc = x264_encoder_open(&x4->params);
         if (!x4->enc) {
@@ -507,13 +366,16 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
         }
 
         x4->pic.opaque = frame->opaque;
-        for (int k =0; k < IRXPS_NUM_REFS; k++) {
-            AVFrame *ref = (AVFrame *) xps_context->ref_frame[k].avframe;
-            for (int i = 0; i < 3; i++) {
-                xps_context->ref_frame[k].data[i] = ref->data[i];
-                xps_context->ref_frame[k].linesize[i] = ref->linesize[i];
+
+        if (frame->pict_type == AV_PICTURE_TYPE_B) {
+            for (int k =0; k < IRXPS_NUM_REFS; k++) {
+                AVFrame *ref = (AVFrame *) xps_context->ref_frame[k].avframe;
+                for (int i = 0; i < 3; i++) {
+                    xps_context->ref_frame[k].data[i] = ref->data[i];
+                    xps_context->ref_frame[k].linesize[i] = ref->linesize[i];
+                }
+                xps_context->ref_frame[k].height = ref->height;
             }
-            xps_context->ref_frame[k].height = ref->height;
         }
     }
     x4->pic.img.i_csp   = x4->params.i_csp;
@@ -526,6 +388,8 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
     x4->pic.img.i_plane = avfmt2_num_planes(ctx->pix_fmt);
 
     if (frame) {
+        AVFrameSideData *side_data;
+
         for (i = 0; i < x4->pic.img.i_plane; i++) {
             x4->pic.img.plane[i]    = frame->data[i];
             x4->pic.img.i_stride[i] = frame->linesize[i];
@@ -535,8 +399,14 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
 
         switch (frame->pict_type) {
         case AV_PICTURE_TYPE_I:
-            x4->pic.i_type = x4->forced_idr > 0 ? X264_TYPE_IDR
-                                                : X264_TYPE_KEYFRAME;
+            if(x4->enable_irdeto_exports) {
+                x4->forced_idr = frame->key_frame;
+                x4->pic.i_type = x4->forced_idr > 0 ? X264_TYPE_IDR
+                                                    : X264_TYPE_I;
+            } else {
+                x4->pic.i_type = x4->forced_idr > 0 ? X264_TYPE_IDR
+                                                    : X264_TYPE_KEYFRAME;
+            }
             break;
         case AV_PICTURE_TYPE_P:
             x4->pic.i_type = X264_TYPE_P;
@@ -571,6 +441,38 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
                     x4->pic.extra_sei.payloads[0].payload_type = 4;
                 }
             }
+        }
+
+        side_data = av_frame_get_side_data(frame, AV_FRAME_DATA_IR_SEI_PAYLOAD);
+        if ((side_data) && (side_data->data) && (side_data->size > 0))
+        {
+            // Add one more extra SEI
+            void *sei_payload = av_mallocz(side_data->size);
+            if (sei_payload)
+            {
+                int payloads_num = (x4->pic.extra_sei.num_payloads > 0 && x4->pic.extra_sei.payloads) ? x4->pic.extra_sei.num_payloads + 1 : 1;
+                x264_sei_payload_t *new_payloads = (x264_sei_payload_t *) av_realloc((payloads_num > 1) ? x4->pic.extra_sei.payloads : NULL, payloads_num * sizeof(x264_sei_payload_t));
+
+                if (new_payloads)
+                {
+                    memcpy(sei_payload, side_data->data, side_data->size);
+
+                    x4->pic.extra_sei.payloads     = new_payloads;
+                    x4->pic.extra_sei.num_payloads = payloads_num;
+                    x4->pic.extra_sei.sei_free     = av_free;
+
+                    x4->pic.extra_sei.payloads[payloads_num - 1].payload_size = side_data->size;
+                    x4->pic.extra_sei.payloads[payloads_num - 1].payload      = sei_payload;
+                    x4->pic.extra_sei.payloads[payloads_num - 1].payload_type = 5; // SEI type 5: unregistered user data
+                }
+                else
+                {
+                    av_free(sei_payload);
+                }
+            }
+
+            // Forced IDR frame
+            x4->pic.i_type = X264_TYPE_IDR;
         }
     }
 
@@ -622,14 +524,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
     *got_packet = ret;
 
     if (*got_packet && x4->enable_irdeto_exports) {
-        /* only merge for annex b type streams (to offload ott and broadcast apps) */
-        if (x4->params.b_annexb != 0)
-        {
+        if (x4->irdeto_non_vcl != 0) {
             ir_xps_context *xps_context = (ir_xps_context *) frame->opaque;
-            if (merge_pkt(xps_context, pkt) != 0) {
-                av_log(ctx, AV_LOG_ERROR, "pkt_merge() failed\n");
-                return AVERROR_EXTERNAL;
-            }
+            ir_merge_pkt_nonvcl(xps_context, pkt, nal, nnal, x4->params.b_annexb, CODEC_AVC);
         }
         /* add PPS to side data */
         for (int i = 0; i < nnal; i++) {
@@ -640,25 +537,25 @@ FF_ENABLE_DEPRECATION_WARNINGS
             }
         }
 
-        /**
-        * @note export uncompressed reencoded frame. Since pic_out may have bigger stride than
-        *       pic_in due to padding, here manually pack pic_out Y buffer so that the export
-        *       buf has same stride as the pic_in
-        * @todo improve here to avoid copy
-        */
-
-        const size_t pic_in_Y_stride = x4->pic.img.i_stride[0];
-        const size_t pic_out_Y_stride = pic_out.img.i_stride[0];
-        const size_t pic_in_Y_height = ctx->height;
-        const size_t pic_in_Y_size = pic_in_Y_stride * pic_in_Y_height;
-        const uint8_t* pic_out_Y_buf = pic_out.img.plane[0];
-        uint8_t* recY = av_malloc(pic_in_Y_size);
-        for (int i = 0; i < pic_in_Y_height; i++)
-        {
-            memcpy(recY + i * pic_in_Y_stride, pic_out_Y_buf + i * pic_out_Y_stride, pic_in_Y_stride);
-        }
-
-        av_packet_add_side_data(pkt, AV_PKT_REENCODED_UNCOMPRESSED_Y_BUF, recY, pic_in_Y_size);
+//      /**
+//      * @note export uncompressed reencoded frame. Since pic_out may have bigger stride than
+//      *       pic_in due to padding, here manually pack pic_out Y buffer so that the export
+//      *       buf has same stride as the pic_in
+//      * @todo improve here to avoid copy
+//      */
+//
+//      const size_t pic_in_Y_stride = x4->pic.img.i_stride[0];
+//      const size_t pic_out_Y_stride = pic_out.img.i_stride[0];
+//      const size_t pic_in_Y_height = ctx->height;
+//      const size_t pic_in_Y_size = pic_in_Y_stride * pic_in_Y_height;
+//      const uint8_t* pic_out_Y_buf = pic_out.img.plane[0];
+//      uint8_t* recY = av_malloc(pic_in_Y_size);
+//      for (int i = 0; i < pic_in_Y_height; i++)
+//      {
+//          memcpy(recY + i * pic_in_Y_stride, pic_out_Y_buf + i * pic_out_Y_stride, pic_in_Y_stride);
+//      }
+//
+//      av_packet_add_side_data(pkt, AV_PKT_REENCODED_UNCOMPRESSED_Y_BUF, recY, pic_in_Y_size);
     }
     return 0;
 }
@@ -1278,7 +1175,8 @@ static const AVOption options[] = {
     { "noise_reduction", "Noise reduction",                               OFFSET(noise_reduction), AV_OPT_TYPE_INT, { .i64 = -1 }, INT_MIN, INT_MAX, VE },
     { "x264-params",  "Override the x264 configuration using a :-separated list of key=value parameters", OFFSET(x264_params), AV_OPT_TYPE_STRING, { 0 }, 0, 0, VE },
     { "irdeto_exports", "Enable irdeto exports through opaque field", OFFSET(enable_irdeto_exports), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, VE },
-    { "irdeto_pps_id", "Id of PPS", OFFSET(irdeto_pps_id), AV_OPT_TYPE_INT, {.i64 = 15}, 1, 63, VE },
+    { "irdeto_pps_id", "Id of PPS",                                   OFFSET(irdeto_pps_id),         AV_OPT_TYPE_INT, {.i64 = 15}, 1, 63, VE },
+    { "irdeto_non_vcl", "Enable preservation of non-VCL NALUs",       OFFSET(irdeto_non_vcl),        AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, VE },
     { NULL },
 };
 
@@ -1294,7 +1192,7 @@ static const AVCodecDefault x264_defaults[] = {
     { "qdiff",            "-1" },
     { "qblur",            "-1" },
     { "qcomp",            "-1" },
-//     { "rc_lookahead",     "-1" },
+//  { "rc_lookahead",     "-1" },
     { "refs",             "-1" },
 #if FF_API_PRIVATE_OPT
     { "sc_threshold",     "-1" },

@@ -30,6 +30,15 @@
 
 /**
 ********************************************************************************
+* Some definitions from "irwmp/ir_wmp.h"
+********************************************************************************
+*/
+#define IR_WMP_SEI_PAYLOAD_V3_SIZE  27
+#define IR_WMP_SEI_FLAG_FIRST_PART  0x00000001
+#define IR_WMP_SEI_FLAG_LAST_PART   0x00000002
+
+/**
+********************************************************************************
 * @enum         VF_STATE
 * @brief        Video filter states representation
 ********************************************************************************
@@ -39,6 +48,19 @@ typedef enum
     VF_STATE_UNINITIALIZED  = 0,    ///< Video filter uninitialized
     VF_STATE_INITIALIZED    = 1     ///< Video filter initialized
 } VF_STATE;
+
+/**
+********************************************************************************
+* @enum         EPOCH_MODE
+* @brief        Epoch-locking mode representation
+********************************************************************************
+*/
+typedef enum
+{
+    EPOCH_MODE_OFF      = 0,    ///< Epoch-locking mode is disabled
+    EPOCH_MODE_COPY     = 1,    ///< Epoch time value is taken from the source
+    EPOCH_MODE_CUSTOM   = 2     ///< Epoch time will be generated internally
+} EPOCH_MODE;
 
 /**
 * @typedef      ir_wmp_context
@@ -81,8 +103,16 @@ typedef int (*f_wmp_configure)(ir_wmp_context ctx) __attribute__((warn_unused_re
 * @brief        Function type of ir_wmp_embed function
 * @see          Look into ir_wmp_embed documentation for details
 */
-typedef int (*f_wmp_embed)(ir_wmp_context ctx, void* const frame, const char* const attr, const char* const value)
+typedef int (*f_wmp_embed)(ir_wmp_context ctx, void* const frame, const char* const crit, const char* const value)
     __attribute__((warn_unused_result));
+
+/**
+* @typedef      f_wmp_sei_payload
+* @brief        Function type of ir_wmp_generate_sei_payload function
+* @see          Look into ir_wmp_generate_sei_payload documentation for details
+*/
+typedef int (*f_wmp_sei_payload)(ir_wmp_context ctx, void* const buffer, size_t* const p_size,
+    const char* const crit, const char* const value, unsigned int flags);
 
 /**
 * @typedef      f_wmp_uninit
@@ -106,18 +136,25 @@ typedef char* (*f_wmp_version)(void);
 typedef int (*f_wmp_itos)(int value, char* const strval, size_t size);
 
 /**
+* @typedef      f_wmp_lltos
+* @brief        Function type of ir_wmp_longlong_to_str function
+* @see          Look into ir_wmp_longlong_to_str documentation for details
+*/
+typedef int (*f_wmp_lltos)(long long int value, char* const strval, size_t size);
+
+/**
 * @typedef      f_wmp_ftos
 * @brief        Function type of ir_wmp_float_to_str function
 * @see          Look into ir_wmp_float_to_str documentation for details
 */
 typedef int (*f_wmp_ftos)(float value, char* const strval, size_t size);
 
-/**
-* @typedef      f_wmp_stot
-* @brief        Function type of ir_wmp_symbol_to_tmid function
-* @see          Look into ir_wmp_symbol_to_tmid documentation for details
-*/
-typedef int (*f_wmp_stot)(char symbol, char* const tmid_str, size_t length);
+// /**
+// * @typedef      f_wmp_stot
+// * @brief        Function type of ir_wmp_symbol_to_tmid function
+// * @see          Look into ir_wmp_symbol_to_tmid documentation for details
+// */
+// typedef int (*f_wmp_stot)(char symbol, char* const tmid_str, size_t length);
 
 /**
 ********************************************************************************
@@ -135,10 +172,12 @@ typedef struct ir_pf_context
     f_wmp_setattr       wmp_setattr;    ///< Attribute set routine
     f_wmp_configure     wmp_configure;  ///< Configure routine
     f_wmp_embed         wmp_embed;      ///< Embed routine
+    f_wmp_sei_payload   wmp_sei_payload;///< SEI payload generation routine
     f_wmp_uninit        wmp_uninit;     ///< Uninit
     f_wmp_getattr       wmp_getattr;    ///< Get attribute routine
     f_wmp_version       wmp_version;    ///< Get version of OTT WM plugin
     f_wmp_itos          wmp_itos;       ///< Helper function int to string
+    f_wmp_lltos         wmp_lltos;      ///< Helper function long long int to string
     f_wmp_ftos          wmp_ftos;       ///< Helper function float to string
 
     /**
@@ -151,18 +190,57 @@ typedef struct ir_pf_context
     *           integration case, these attributes have to be set properly
     ****************************************************************************
     */
+    const char* threads;
+    const char* scdfactor;
     const char* firstbit;
     const char* lastbit;
     const char* firstframe;
     const char* lastframe;
     const char* oid;
     const char* tmid;
+    const char* drid;
     const char* profile;
     const char* banner;
     const char* logfile;
+    const char* statfile;
 
     ///< Customized attributes to run special plugins
-    const char* wmtime;
+    uint64_t    wmtime;
+    const char* epoch;
+    const char* sei;
+
+    /**
+    ****************************************************************************
+    * @brief    Additional parameters to support Epoch-locking feature
+    ****************************************************************************
+    */
+    EPOCH_MODE  epoch_mode;
+    int64_t     epoch_time;
+    int64_t     epoch_seglen;
+    int64_t     pts_initial;
+    int64_t     pts_last;
+    uint64_t    pts_num;
+
+    /**
+    ****************************************************************************
+    * @brief    Indication of the WM plugin mode: DRID or TMID
+    ****************************************************************************
+    */
+    int drid_mode;
+
+    /**
+    ****************************************************************************
+    * @brief    Last sequence ID value used for TMID bit value extraction
+    ****************************************************************************
+    */
+    uint64_t sequence_id;
+
+    /**
+    ****************************************************************************
+    * @brief    SEI payload type
+    ****************************************************************************
+    */
+    AVIrdetoSeiType sei_type;
 
     /**
     ****************************************************************************

@@ -55,6 +55,30 @@
 static const AVOption irdeto_owl_emb_options[] =
 {
     {
+        "wmthreads",
+        "Number of threads used by watermarking library",
+        IR_CMD_OFFSET(threads),
+        AV_OPT_TYPE_STRING,
+        {
+            .str = "4"
+        },
+        CHAR_MIN,
+        CHAR_MAX,
+        IR_CMD_FLAGS
+    },
+    {
+        "scdfactor",
+        "Factor parameter for scene-cut detection module, it is used to tune sensitivity of detection",
+        IR_CMD_OFFSET(scdfactor),
+        AV_OPT_TYPE_STRING,
+        {
+            .str = "4.0"
+        },
+        CHAR_MIN,
+        CHAR_MAX,
+        IR_CMD_FLAGS
+    },
+    {
         "firstbit",
         "Starting bit position (included) for the watermark embedding",
         IR_CMD_OFFSET(firstbit),
@@ -122,8 +146,21 @@ static const AVOption irdeto_owl_emb_options[] =
         IR_CMD_OFFSET(tmid),
         AV_OPT_TYPE_STRING,
         {
-            ///< Default to e because TMID becomes 1 0 switch all the time
+            ///< TMID becomes 1 0 switch all the time
             .str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        CHAR_MIN,
+        CHAR_MAX,
+        IR_CMD_FLAGS
+    },
+    {
+        "drid",
+        "32-bit unique identifier (device ID, uploader ID, etc) "
+        "which is used instead of TMID to be embedded in the video stream",
+        IR_CMD_OFFSET(drid),
+        AV_OPT_TYPE_STRING,
+        {
+            .str = ""
         },
         CHAR_MIN,
         CHAR_MAX,
@@ -134,9 +171,23 @@ static const AVOption irdeto_owl_emb_options[] =
         "Period of one watermark symbol (only used by general/default plugin) "
         "it will be ignored if plugin used is not general/default",
         IR_CMD_OFFSET(wmtime),
+        AV_OPT_TYPE_UINT64,
+        {
+            .i64 = 10000
+        },
+        0,
+        UINT32_MAX,
+        IR_CMD_FLAGS
+    },
+    {
+        "epoch",
+        "Epoch-locking mode (and initial epoch time in some cases). By default, "
+        "set to \"off\" (disabled). Set it to \"copy\" to take epoch time value "
+        "from the source, or specify initial epoch time (in seconds)",
+        IR_CMD_OFFSET(epoch),
         AV_OPT_TYPE_STRING,
         {
-            .str = "10000"
+            .str = "off"
         },
         CHAR_MIN,
         CHAR_MAX,
@@ -155,9 +206,22 @@ static const AVOption irdeto_owl_emb_options[] =
         IR_CMD_FLAGS
     },
     {
+        "sei",
+        "Type of SEI payload (off, irdeto, irdeto_v2, dash). "
+        "If specified, SEI payload will be additionally provided to an encoder with the frame data.",
+        IR_CMD_OFFSET(sei),
+        AV_OPT_TYPE_STRING,
+        {
+            .str = "off"
+        },
+        CHAR_MIN,
+        CHAR_MAX,
+        IR_CMD_FLAGS
+    },
+    {
         "banner",
         "If set to on, visual debug banner will also be printed to the "
-        "watermarked frames. Default disabled.",
+        "watermarked frames. By default it is switched off.",
         IR_CMD_OFFSET(banner),
         AV_OPT_TYPE_STRING,
         {
@@ -169,11 +233,23 @@ static const AVOption irdeto_owl_emb_options[] =
     },
     {
         "logfile",
-        "Log file path to store output logs, by default it's /dev/null",
+        "Log file path to store output logs, by default it is not specified and logs are disabled",
         IR_CMD_OFFSET(logfile),
         AV_OPT_TYPE_STRING,
         {
-            .str = "/dev/null"
+            .str = ""
+        },
+        CHAR_MIN,
+        CHAR_MAX,
+        IR_CMD_FLAGS
+    },
+    {
+        "statfile",
+        "File path to store embedding statistics, by default it is not specified and statistics is not collected",
+        IR_CMD_OFFSET(statfile),
+        AV_OPT_TYPE_STRING,
+        {
+            .str = ""
         },
         CHAR_MIN,
         CHAR_MAX,

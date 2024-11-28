@@ -69,6 +69,7 @@ typedef struct ir_xps_export_hevc
     {
         uint32_t    slice_type;
         uint32_t    slice_picture_order_cnt_lsb;
+        uint32_t    pps_id;
     } slh;
 
     struct hevc_parsed
@@ -121,11 +122,21 @@ typedef struct ir_xps_export_avc
         uint32_t    log2_max_pic_order_cnt_lsb_minus4;
         uint32_t    max_num_ref_frames;
         uint32_t    frame_mbs_only_flag;
+        uint16_t    mb_aff_flag;
     } sps;
+
+    struct avc_pps
+    {
+        uint8_t     entropy_coding_mode_flag;
+    } pps;
 
     struct avc_slice_header
     {
         uint32_t    frame_num;
+        uint16_t    idr_pic_id;
+        uint32_t    field_pic_flag;
+        int32_t     delta_poc_bottom;
+        uint32_t    pps_id;
     } slice_header;
 
     struct avc_parsed
@@ -228,7 +239,6 @@ typedef struct
     ir_ref ref_frame[IRXPS_NUM_REFS];
 
     uint32_t is_ref;
-
 } ir_xps_context;
 
 ir_xps_context* ir_xps_context_create();

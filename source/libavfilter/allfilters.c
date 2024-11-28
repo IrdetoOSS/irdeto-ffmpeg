@@ -396,8 +396,6 @@ extern AVFilter ff_vf_zscale;
 
 // Start of Irdeto filters
 extern AVFilter ff_vf_irdeto_owl_emb;
-extern AVFilter ff_vf_irdeto_owl_det;
-extern AVFilter ff_vf_irdeto_cbwm_det;
 extern AVFilter ff_vf_irhdrtf;
 extern AVFilter ff_vf_irdeto_wm_split;
 // End of Irdeto filters

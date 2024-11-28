@@ -1187,7 +1187,7 @@ static int parse_manifest(AVFormatContext *s, const char *url, AVIOContext *in)
 
     filesize = avio_read(in, buffer, filesize);
     if (filesize <= 0) {
-        av_log(s, AV_LOG_ERROR, "Unable to read to offset '%s'\n", url);
+        av_log(s, AV_LOG_ERROR, "Unable to read to offset '%s'\n", c->base_url);
         ret = AVERROR_INVALIDDATA;
     } else {
         LIBXML_TEST_VERSION
@@ -1198,20 +1198,20 @@ static int parse_manifest(AVFormatContext *s, const char *url, AVIOContext *in)
 
         if (!node) {
             ret = AVERROR_INVALIDDATA;
-            av_log(s, AV_LOG_ERROR, "Unable to parse '%s' - missing root node\n", url);
+            av_log(s, AV_LOG_ERROR, "Unable to parse '%s' - missing root node\n", c->base_url);
             goto cleanup;
         }
 
         if (node->type != XML_ELEMENT_NODE ||
             av_strcasecmp(node->name, (const char *)"MPD")) {
             ret = AVERROR_INVALIDDATA;
-            av_log(s, AV_LOG_ERROR, "Unable to parse '%s' - wrong root node name[%s] type[%d]\n", url, node->name, (int)node->type);
+            av_log(s, AV_LOG_ERROR, "Unable to parse '%s' - wrong root node name[%s] type[%d]\n", c->base_url, node->name, (int)node->type);
             goto cleanup;
         }
 
         val = xmlGetProp(node, "type");
         if (!val) {
-            av_log(s, AV_LOG_ERROR, "Unable to parse '%s' - missing type attrib\n", url);
+            av_log(s, AV_LOG_ERROR, "Unable to parse '%s' - missing type attrib\n", c->base_url);
             ret = AVERROR_INVALIDDATA;
             goto cleanup;
         }
@@ -1287,7 +1287,7 @@ static int parse_manifest(AVFormatContext *s, const char *url, AVIOContext *in)
             node = xmlNextElementSibling(node);
         }
         if (!period_node) {
-            av_log(s, AV_LOG_ERROR, "Unable to parse '%s' - missing Period node\n", url);
+            av_log(s, AV_LOG_ERROR, "Unable to parse '%s' - missing Period node\n", c->base_url);
             ret = AVERROR_INVALIDDATA;
             goto cleanup;
         }
@@ -1301,7 +1301,7 @@ static int parse_manifest(AVFormatContext *s, const char *url, AVIOContext *in)
             } else if (!av_strcasecmp(adaptionset_node->name, (const char *)"SegmentList")) {
                 period_segmentlist_node = adaptionset_node;
             } else if (!av_strcasecmp(adaptionset_node->name, (const char *)"AdaptationSet")) {
-                parse_manifest_adaptationset(s, url, adaptionset_node, mpd_baseurl_node, period_baseurl_node, period_segmenttemplate_node, period_segmentlist_node);
+                parse_manifest_adaptationset(s, c->base_url, adaptionset_node, mpd_baseurl_node, period_baseurl_node, period_segmenttemplate_node, period_segmentlist_node);
             }
             adaptionset_node = xmlNextElementSibling(adaptionset_node);
         }

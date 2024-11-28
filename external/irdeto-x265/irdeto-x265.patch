@@ -1,0 +1,143 @@
+diff -ur x265.h x265.h
+--- x265.h	2024-11-27 23:02:07.340778085 +0100
++++ x265.h	2024-11-27 22:58:31.013685335 +0100
+@@ -2344,6 +2344,16 @@
+     /*Frame level RateControl Configuration*/
+     int     bConfigRCFrame;
+     int    isAbrLadderEnable;
++
++    /*== Irdeto specific parameters ==*/
++    int bIrdetoExtension;
++    void* xps_context;
++    uint8_t fast_merge_level;
++    uint8_t split_reuse;
++    uint32_t tileRows;
++    uint32_t tileColumns;
++    uint32_t pps_id;
++
+ } x265_param;
+ 
+ /* x265_param_alloc:
+diff -ur CMakeLists.txt CMakeLists.txt
+--- CMakeLists.txt	2024-11-27 17:57:41.704194171 +0100
++++ CMakeLists.txt	2024-11-27 17:56:49.704364472 +0100
+@@ -530,19 +530,22 @@
+ endif()
+ 
+ # Build options
++set(INCLUDE_INSTALL_DIR include CACHE STRING "Install location of includes")
+ set(LIB_INSTALL_DIR lib CACHE STRING "Install location of libraries")
+ set(BIN_INSTALL_DIR bin CACHE STRING "Install location of executables")
+ set(EXTRA_LIB "" CACHE STRING "Extra libraries to link against")
++set(EXTRA_LIB_10BIT "" CACHE STRING "Extra 10bit library to link against")
++set(EXTRA_LIB_12BIT "" CACHE STRING "Extra 12bit library to link against")
+ set(EXTRA_LINK_FLAGS "" CACHE STRING "Extra link flags")
+ if(EXTRA_LINK_FLAGS)
+     list(APPEND LINKER_OPTIONS ${EXTRA_LINK_FLAGS})
+ endif()
+-if(EXTRA_LIB)
++if(EXTRA_LIB OR EXTRA_LIB_10BIT OR EXTRA_LIB_12BIT)
+     option(LINKED_8BIT  "8bit libx265 is being linked with this library" OFF)
+     option(LINKED_10BIT "10bit libx265 is being linked with this library" OFF)
+     option(LINKED_12BIT "12bit libx265 is being linked with this library" OFF)
+-endif(EXTRA_LIB)
+-mark_as_advanced(EXTRA_LIB EXTRA_LINK_FLAGS)
++endif()
++mark_as_advanced(EXTRA_LIB EXTRA_LIB_10BIT EXTRA_LIB_12BIT EXTRA_LINK_FLAGS)
+ 
+ if(X64 OR ARM64 OR PPC64)
+     # NOTE: We only officially support high-bit-depth compiles of x265
+@@ -809,6 +812,12 @@
+ if(EXTRA_LIB)
+     target_link_libraries(x265-static ${EXTRA_LIB})
+ endif()
++if(EXTRA_LIB_10BIT)
++    target_link_libraries(x265-static ${EXTRA_LIB_10BIT})
++endif()
++if(EXTRA_LIB_12BIT)
++    target_link_libraries(x265-static ${EXTRA_LIB_12BIT})
++endif()
+ if(ENABLE_LIBVMAF)
+     target_link_libraries(x265-static ${VMAF})
+ endif()
+@@ -831,7 +840,7 @@
+     install(FILES "${SVT_HEVC_LIBRARY}" DESTINATION ${LIB_INSTALL_DIR})
+ endif()
+ 
+-install(FILES x265.h "${PROJECT_BINARY_DIR}/x265_config.h" DESTINATION include)
++install(FILES x265.h "${PROJECT_BINARY_DIR}/x265_config.h" DESTINATION ${INCLUDE_INSTALL_DIR})
+ if((WIN32 AND ENABLE_CLI) OR (WIN32 AND ENABLE_SHARED))
+     if(MSVC_IDE)
+         if(ENABLE_CLI)
+@@ -890,7 +899,13 @@
+     if(EXTRA_LIB)
+         target_link_libraries(x265-shared ${EXTRA_LIB})
+     endif()
+-	 target_link_libraries(x265-shared ${PLATFORM_LIBS})
++    if(EXTRA_LIB_10BIT)
++        target_link_libraries(x265-shared ${EXTRA_LIB_10BIT})
++    endif()
++    if(EXTRA_LIB_12BIT)
++        target_link_libraries(x265-shared ${EXTRA_LIB_12BIT})
++    endif()
++    target_link_libraries(x265-shared ${PLATFORM_LIBS})
+     if(SVTHEVC_FOUND)
+         target_link_libraries(x265-shared ${SVT_HEVC_LIBRARY})
+     endif(SVTHEVC_FOUND)
+diff -ur common/CMakeLists.txt common/CMakeLists.txt
+--- common/CMakeLists.txt	2024-11-26 19:47:07.339662960 +0100
++++ common/CMakeLists.txt	2024-11-26 17:45:42.158480328 +0100
+@@ -1,7 +1,7 @@
+ # vim: syntax=cmake
+ 
+ list(APPEND VFLAGS "-DX265_VERSION=${X265_VERSION}")
+-if(EXTRA_LIB)
++if(EXTRA_LIB OR EXTRA_LIB_10BIT OR EXTRA_LIB_12BIT)
+     if(LINKED_8BIT)
+         list(APPEND VFLAGS "-DLINKED_8BIT=1")
+     endif(LINKED_8BIT)
+@@ -11,7 +11,7 @@
+     if(LINKED_12BIT)
+         list(APPEND VFLAGS "-DLINKED_12BIT=1")
+     endif(LINKED_12BIT)
+-endif(EXTRA_LIB)
++endif()
+ 
+ if(ENABLE_ASSEMBLY)
+     set_source_files_properties(threading.cpp primitives.cpp pixel.cpp PROPERTIES COMPILE_FLAGS -DENABLE_ASSEMBLY=1)
+diff -ur encoder/CMakeLists.txt encoder/CMakeLists.txt
+--- encoder/CMakeLists.txt	2024-11-26 19:46:40.836947787 +0100
++++ encoder/CMakeLists.txt	2024-11-26 17:45:42.224503187 +0100
+@@ -11,7 +11,7 @@
+    add_definitions(/wd4701) # potentially uninitialized local variable 'foo' used
+ endif()
+ 
+-if(EXTRA_LIB)
++if(EXTRA_LIB OR EXTRA_LIB_10BIT OR EXTRA_LIB_12BIT)
+     if(LINKED_8BIT)
+         list(APPEND APIFLAGS "-DLINKED_8BIT=1")
+     endif(LINKED_8BIT)
+@@ -23,7 +23,7 @@
+     endif(LINKED_12BIT)
+     string(REPLACE ";" " " APIFLAGSTR "${APIFLAGS}")
+     set_source_files_properties(api.cpp PROPERTIES COMPILE_FLAGS ${APIFLAGSTR})
+-endif(EXTRA_LIB)
++endif()
+ 
+ add_library(encoder OBJECT ../x265.h
+     analysis.cpp analysis.h
+diff -ur test/CMakeLists.txt test/CMakeLists.txt
+--- test/CMakeLists.txt	2024-11-26 19:47:07.433703982 +0100
++++ test/CMakeLists.txt	2024-11-26 17:45:42.248638745 +0100
+@@ -46,9 +46,9 @@
+ 
+ target_link_libraries(TestBench x265-static ${PLATFORM_LIBS})
+ if(LINKER_OPTIONS)
+-    if(EXTRA_LIB)
++    if(EXTRA_LIB OR EXTRA_LIB_10BIT OR EXTRA_LIB_12BIT)
+         list(APPEND LINKER_OPTIONS "-L..")
+-    endif(EXTRA_LIB)
++    endif()
+     string(REPLACE ";" " " LINKER_OPTION_STR "${LINKER_OPTIONS}")
+     set_target_properties(TestBench PROPERTIES LINK_FLAGS "${LINKER_OPTION_STR}")
+ endif()

@@ -1,7 +1,7 @@
 
 add_executable(irdeto-codec-util main.cpp ffmpeg_encoder.cpp)
 target_link_libraries(irdeto-codec-util PRIVATE irffmpeg)
-target_compile_options(irdeto-codec-util PRIVATE -Wall -Wextra -Werror)
+target_compile_options(irdeto-codec-util PRIVATE -Wall -Wextra -Werror -Wno-error=attributes)
 target_include_directories(irdeto-codec-util PRIVATE ${IR_PROJECT_DIR}/source ${IR_PROJECT_DIR}/external/irdeto-xps-export/include)
 
 set_target_properties(irdeto-codec-util PROPERTIES VERSION ${IR_PROJECT_VERSION})

@@ -2754,6 +2754,53 @@ static int set_side_data(HEVCContext *s)
                metadata->MaxCLL, metadata->MaxFALL);
     }
 
+    if (s->sei.timecode.present) {
+        uint32_t *tc_sd;
+        AVFrameSideData *tcside = av_frame_new_side_data(out, AV_FRAME_DATA_S12M_TIMECODE,
+                                                         sizeof(uint32_t) * 4);
+        if (!tcside)
+            return AVERROR(ENOMEM);
+
+        tc_sd = (uint32_t*)tcside->data;
+        tc_sd[0] = s->sei.timecode.num_clock_ts;
+
+        for (int i = 0; i < tc_sd[0]; i++) {
+            uint32_t tc = 0;
+
+            int drop = s->sei.timecode.cnt_dropped_flag[i];
+            int   hh = s->sei.timecode.hours_value[i] % 24;
+            int   mm = av_clip(s->sei.timecode.minutes_value[i], 0, 59);
+            int   ss = av_clip(s->sei.timecode.seconds_value[i], 0, 59);
+            int   ff = s->sei.timecode.n_frames[i] % 40;
+
+            /* For SMPTE 12-M timecodes, frame count is a special case if > 30 FPS.
+               See SMPTE ST 12-1:2014 Sec 12.1 for more info. */
+            if (av_cmp_q(s->avctx->framerate, (AVRational) {30, 1}) == 1) {
+                if (ff % 2 == 1) {
+                    if (av_cmp_q(s->avctx->framerate, (AVRational) {50, 1}) == 0)
+                        tc |= (1 << 7);
+                    else
+                        tc |= (1 << 23);
+                }
+                ff /= 2;
+            }
+
+            tc |= drop << 30;
+            tc |= (ff / 10) << 28;
+            tc |= (ff % 10) << 24;
+            tc |= (ss / 10) << 20;
+            tc |= (ss % 10) << 16;
+            tc |= (mm / 10) << 12;
+            tc |= (mm % 10) << 8;
+            tc |= (hh / 10) << 4;
+            tc |= (hh % 10);
+
+            tc_sd[i + 1] = tc;
+        }
+
+        s->sei.timecode.num_clock_ts = 0;
+    }
+
     if (s->sei.a53_caption.a53_caption) {
         AVFrameSideData* sd = av_frame_new_side_data(out,
                                                      AV_FRAME_DATA_A53_CC,
