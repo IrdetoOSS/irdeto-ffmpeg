@@ -1820,6 +1820,10 @@ static int h264_slice_header_parse(const H264Context *h, H264SliceContext *sl,
             return -1;
         }
         field_pic_flag = get_bits1(&sl->gb);
+        if (h->enable_irdeto_exports)
+        {
+            sl->field_pic_flag = field_pic_flag;
+        }
         if (field_pic_flag) {
             bottom_field_flag = get_bits1(&sl->gb);
             picture_structure = PICT_TOP_FIELD + bottom_field_flag;
@@ -1839,7 +1843,14 @@ static int h264_slice_header_parse(const H264Context *h, H264SliceContext *sl,
     }
 
     if (nal->type == H264_NAL_IDR_SLICE)
-        get_ue_golomb_long(&sl->gb); /* idr_pic_id */
+    {
+        if (h->enable_irdeto_exports)
+        {
+            sl->idr_pic_id = get_ue_golomb_long(&sl->gb);
+        } else {
+            get_ue_golomb_long(&sl->gb); /* idr_pic_id */
+        }
+    }
 
     if (sps->poc_type == 0) {
         sl->poc_lsb = get_bits(&sl->gb, sps->log2_max_poc_lsb);

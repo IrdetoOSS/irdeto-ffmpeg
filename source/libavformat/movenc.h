@@ -214,10 +214,12 @@ typedef struct MOVMuxContext {
     int min_fragment_duration;
     int max_fragment_size;
     int ism_lookahead;
+    int64_t ism_offset;
     AVIOContext *mdat_buf;
     int first_trun;
 
     int video_track_timescale;
+    int audio_track_timescale;
 
     int reserved_moov_size; ///< 0 for disabled, -1 for automatic, size otherwise
     int64_t reserved_header_pos;
@@ -274,6 +276,8 @@ typedef struct MOVMuxContext {
 #define FF_MOV_FLAG_SKIP_TRAILER          (1 << 18)
 #define FF_MOV_FLAG_NEGATIVE_CTS_OFFSETS  (1 << 19)
 #define FF_MOV_FLAG_FRAG_EVERY_FRAME      (1 << 20)
+#define FF_MOV_FLAG_SKIP_SIDX             (1 << 21)
+#define FF_MOV_FLAG_CMAF                  (1 << 22)
 
 int ff_mov_write_packet(AVFormatContext *s, AVPacket *pkt);
 

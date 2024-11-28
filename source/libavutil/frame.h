@@ -166,6 +166,12 @@ enum AVFrameSideDataType {
      * function in libavutil/timecode.c.
      */
     AV_FRAME_DATA_S12M_TIMECODE,
+
+    /**
+     * Irdeto SEI payload
+     * This payload is already prepared by the Encoder Plugin and should be inserted into SEI NALU as is
+     */
+    AV_FRAME_DATA_IR_SEI_PAYLOAD,
 };
 
 enum AVActiveFormatDescription {

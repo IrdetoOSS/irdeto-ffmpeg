@@ -149,8 +149,6 @@ OBJS-$(CONFIG_ANULLSINK_FILTER)              += asink_anullsink.o
 # video filters
 # Start of irdeto filters
 OBJS-$(CONFIG_IRDETO_OWL_EMB_FILTER)         += vf_wm_plugin.o
-OBJS-$(CONFIG_IRDETO_OWL_DET_FILTER)         += vf_det.o
-OBJS-$(CONFIG_IRDETO_CBWM_DET_FILTER)        += vf_cb_det.o
 OBJS-$(CONFIG_IRHDRTF_FILTER)                += vf_hdr_tf.o
 OBJS-$(CONFIG_IRDETO_WM_SPLIT_FILTER)        += vf_wm_split.o
 # End of Irdeto filters

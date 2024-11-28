@@ -155,6 +155,54 @@ static int decode_nal_sei_pic_timing(HEVCSEI *s, GetBitContext *gb, const HEVCPa
     return 0;
 }
 
+static int decode_nal_sei_timecode(HEVCSEITimeCode *s, GetBitContext *gb)
+{
+    int i;
+
+    s->num_clock_ts = get_bits(gb, 2);
+
+    for (i = 0; i < s->num_clock_ts; i++) {
+        s->clock_timestamp_flag[i] =  get_bits(gb, 1);
+
+        if (s->clock_timestamp_flag[i]) {
+            s->units_field_based_flag[i] = get_bits(gb, 1);
+            s->counting_type[i]          = get_bits(gb, 5);
+            s->full_timestamp_flag[i]    = get_bits(gb, 1);
+            s->discontinuity_flag[i]     = get_bits(gb, 1);
+            s->cnt_dropped_flag[i]       = get_bits(gb, 1);
+
+            s->n_frames[i]               = get_bits(gb, 9);
+
+            if (s->full_timestamp_flag[i]) {
+                s->seconds_value[i]      = av_clip(get_bits(gb, 6), 0, 59);
+                s->minutes_value[i]      = av_clip(get_bits(gb, 6), 0, 59);
+                s->hours_value[i]        = av_clip(get_bits(gb, 5), 0, 23);
+            } else {
+                s->seconds_flag[i] = get_bits(gb, 1);
+                if (s->seconds_flag[i]) {
+                    s->seconds_value[i] = av_clip(get_bits(gb, 6), 0, 59);
+                    s->minutes_flag[i]  = get_bits(gb, 1);
+                    if (s->minutes_flag[i]) {
+                        s->minutes_value[i] = av_clip(get_bits(gb, 6), 0, 59);
+                        s->hours_flag[i] =  get_bits(gb, 1);
+                        if (s->hours_flag[i]) {
+                            s->hours_value[i] = av_clip(get_bits(gb, 5), 0, 23);
+                        }
+                    }
+                }
+            }
+
+            s->time_offset_length[i] = get_bits(gb, 5);
+            if (s->time_offset_length[i] > 0) {
+                s->time_offset_value[i] = get_bits_long(gb, s->time_offset_length[i]);
+            }
+        }
+    }
+
+    s->present = 1;
+    return 0;
+}
+
 static int decode_registered_user_data_closed_caption(HEVCSEIA53Caption *s, GetBitContext *gb,
                                                       int size)
 {
@@ -285,6 +333,8 @@ static int decode_nal_sei_prefix(GetBitContext *gb, void *logctx, HEVCSEI *s,
         return decode_nal_sei_display_orientation(&s->display_orientation, gb);
     case HEVC_SEI_TYPE_PICTURE_TIMING:
         return decode_nal_sei_pic_timing(s, gb, ps, logctx, size);
+    case HEVC_SEI_TYPE_TIME_CODE:
+        return decode_nal_sei_timecode(&s->timecode, gb);
     case HEVC_SEI_TYPE_MASTERING_DISPLAY_INFO:
         return decode_nal_sei_mastering_display_info(&s->mastering_display, gb);
     case HEVC_SEI_TYPE_CONTENT_LIGHT_LEVEL_INFO:

@@ -4,13 +4,13 @@ ENABLE_TESTING()
 
 PROJECT(irdeto-ffmpeg)
 
-add_subdirectory(./external/irdeto-xps-export )
+add_subdirectory(./external/irdeto-xps-export)
 
-add_subdirectory(./external/irdeto-x264 )
+add_subdirectory(./external/irdeto-x264)
 ExternalProject_Get_Property(X264 BINARY_DIR)
 set(X264_INSTALL_PREFIX ${BINARY_DIR}/${CMAKE_INSTALL_PREFIX})
 
-add_subdirectory(./external/irdeto-x265 )
+add_subdirectory(./external/irdeto-x265)
 ExternalProject_Get_Property(X265_8BIT BINARY_DIR)
 set(X265_INSTALL_PREFIX ${BINARY_DIR}/${CMAKE_INSTALL_PREFIX})
 
@@ -41,6 +41,7 @@ ExternalProject_Add(
             --enable-libx264
             --enable-libx265
             --enable-libopenjpeg
+            --disable-sdl2
             --disable-gpl
             --disable-static
             --disable-doc
@@ -51,6 +52,8 @@ ExternalProject_Add(
             --disable-encoder=prores_aw
             --disable-encoder=prores
             --enable-encoder=prores_ks
+            --enable-demuxer=dash
+            --enable-libxml2
             --extra-cflags=-isystem${X265_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/irx265/
             --extra-cflags=-isystem${X264_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/irx264/
             --extra-cflags=-isystem${irdeto-xps-export-devel_DIR}/../${CMAKE_INSTALL_INCLUDEDIR}/
@@ -82,7 +85,7 @@ ExternalProject_Add(
         LOG_CONFIGURE on
         LOG_BUILD on
         LOG_INSTALL on
-        BUILD_ALWAYS 1
+        BUILD_ALWAYS on
         BUILD_IN_SOURCE off
 )
 ExternalProject_Get_Property(FFMPEG BINARY_DIR)
