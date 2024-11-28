@@ -1,3 +1,4 @@
+#include <string>
 
 #include "ffmpeg_encoder.h"
 
@@ -7,7 +8,7 @@ extern "C"
 #include "libavcodec/avcodec.h"
 }
 
-int encode(AVFrame* const frame, AVPacket* const packet, int annexb, int codec_id, int qp)
+int encode(AVFrame* const frame, AVPacket* const packet, int annexb, int non_vcl, int codec_id, int qp)
 {
     int result = 0;
     AVCodec* codec = NULL;
@@ -45,6 +46,7 @@ int encode(AVFrame* const frame, AVPacket* const packet, int annexb, int codec_i
         *           to put custom PPS into moov->trak->mdia->minf->stbl->stsd->avc1
         */
         av_dict_set(&opts, "irdeto_pps_id", "11", 0);
+        av_dict_set(&opts, "irdeto_non_vcl", non_vcl ? "1" : "0", 0);
 
         ///< Log level is set to warning
         if (codec_id == AV_CODEC_ID_H264)

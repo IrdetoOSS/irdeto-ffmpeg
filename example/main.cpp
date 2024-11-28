@@ -53,6 +53,14 @@ int decode_frame(AVCodecContext* decode_ctx, AVFrame* const frame, AVPacket* con
     return result;
 }
 
+static void usage()
+{
+    std::cerr << "irdeto-codec-util <fin> <fout> <qp> [i]" << std::endl;
+    std::cerr << "    fin : input_elementary_stream" << std::endl;
+    std::cerr << "    fout: output_elementary_stream" << std::endl;
+    std::cerr << "    i   : re-encode intra frames"  << std::endl;
+}
+
 int main(int argc, char const *argv[])
 {
     int result = -1;
@@ -66,12 +74,13 @@ int main(int argc, char const *argv[])
     int64_t packet_guid = 0, display_guid = 0;
     int video_stream_index = -1;
     int qp = 0;
+    bool intra_only = false;
 
     do
     {
-        if (argc != 4)
+        if (argc !=4 && argc != 5)
         {
-            std::cerr << "Usage: irdeto-codec-util <input_elementary_stream> <output_elementary_stream> <qp>" << std::endl;
+            usage();
             break;
         }
         qp = atoi(argv[3]);
@@ -79,6 +88,17 @@ int main(int argc, char const *argv[])
         {
             std::cerr << "<qp> value must be in range [1, 51]" << std::endl;
             break;
+        }
+
+        if (argc == 5)
+        {
+            if (strcmp(argv[4], "i") != 0)
+            {
+                std::cerr << "Invalid argument, " << argv[4] << std::endl;
+                usage();
+                break;
+            }
+            intra_only = true;
         }
 
         av_log_set_level(AV_LOG_WARNING);
@@ -168,12 +188,6 @@ int main(int argc, char const *argv[])
             break;
         }
         av_dict_free(&opts);
-        if (codec_id == AV_CODEC_ID_H264 && decode_ctx->field_order != AV_FIELD_PROGRESSIVE)
-        {
-            std::cerr << "Interlaced input stream " << argv[1] << " is not supported." << std::endl;
-            result = -2;
-            break;
-        }
 
         frame = av_frame_alloc();
         av_init_packet(&packet);
@@ -205,7 +219,8 @@ int main(int argc, char const *argv[])
             if (0 == decode_frame(decode_ctx, frame, &packet, 0))
             {
                 ir_xps_context* xps = static_cast<ir_xps_context*>(frame->opaque);
-                if (frame->pict_type == AV_PICTURE_TYPE_B && xps && !xps->is_ref)
+                if (xps && ((frame->pict_type == AV_PICTURE_TYPE_B && !intra_only && !xps->is_ref) ||
+                            (frame->pict_type == AV_PICTURE_TYPE_I && intra_only)))
                 {
                     std::list<AVPacket>::iterator it = std::find_if(dts_order_packets.begin(), dts_order_packets.end(),
                         pts_matcher_t(frame->pts));
@@ -217,7 +232,7 @@ int main(int argc, char const *argv[])
                     *           much space to preserve information anyway, encoder will produce identical frame pixels.
                     */
                     int orig_size = (*it).size;
-                    result = encode(frame, &(*it), 1, codec_id, qp);
+                    result = encode(frame, &(*it), 1, 1, codec_id, qp);
                     if (0 != result)
                     {
                         ir_xps_context_destroy(xps);
