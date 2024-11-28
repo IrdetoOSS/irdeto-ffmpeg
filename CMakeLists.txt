@@ -171,3 +171,6 @@ target_include_directories(irffmpeg INTERFACE ${FFMPEG_INCLUDE_DIRECTORY})
 add_dependencies(irffmpeg FFMPEG)
 
 INSTALL(FILES source/RELEASE_NOTES RELEASE source/LICENSE.md source/COPYING.LGPLv2.1 source/CREDITS DESTINATION share/irffmpeg)
+
+INSTALL(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_INSTALL_PREFIX}/${IR_BINDIR}/ffmpeg ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/irdeto-ffmpeg)")
+INSTALL(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_INSTALL_PREFIX}/${IR_BINDIR}/ffprobe ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/irdeto-ffprobe)")
