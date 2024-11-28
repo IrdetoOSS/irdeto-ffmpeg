@@ -96,6 +96,7 @@ IR_XPS_EXPORT_STATUS ir_xps_export_x265(const struct HEVCContext* const s,
         */
         xps->slh.slice_type = s->sh.slice_type;
         xps->slh.slice_picture_order_cnt_lsb = s->sh.pic_order_cnt_lsb;
+        xps->slh.pps_id = s->sh.pps_id;
         xps->parsed.nal_unit_type = s->first_nal_type;
         xps->parsed.is_output = 1;
         if(xps->pps.output_flag_present_flag)

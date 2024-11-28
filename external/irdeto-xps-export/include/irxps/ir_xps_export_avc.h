@@ -61,6 +61,14 @@ IR_XPS_EXPORT_STATUS ir_xps_export_x264(const struct H264Context* const h,
                 h->ps.sps->log2_max_poc_lsb - 4;
             xps_context->avc_meta.sps.max_num_ref_frames = h->ps.sps->ref_frame_count;
             xps_context->avc_meta.sps.frame_mbs_only_flag = h->ps.sps->frame_mbs_only_flag;
+            xps_context->avc_meta.sps.mb_aff_flag = h->ps.sps->mb_aff;
+
+            /**
+            ********************************************************************
+            * @note     Export PPS data
+            ********************************************************************
+            */
+            xps_context->avc_meta.pps.entropy_coding_mode_flag = (h->ps.pps->cabac > 0) ? 1 : 0;
 
             /**
             ********************************************************************
@@ -68,6 +76,10 @@ IR_XPS_EXPORT_STATUS ir_xps_export_x264(const struct H264Context* const h,
             ********************************************************************
             */
             xps_context->avc_meta.slice_header.frame_num = h->cur_pic_ptr->frame_num;
+            xps_context->avc_meta.slice_header.idr_pic_id = h->slice_ctx->idr_pic_id;
+            xps_context->avc_meta.slice_header.field_pic_flag = h->slice_ctx->field_pic_flag;
+            xps_context->avc_meta.slice_header.delta_poc_bottom = h->slice_ctx->delta_poc_bottom;
+            xps_context->avc_meta.slice_header.pps_id = h->slice_ctx->pps_id;
 
             /**
             ********************************************************************
@@ -130,14 +142,13 @@ IR_XPS_EXPORT_STATUS ir_xps_export_x264(const struct H264Context* const h,
                 }
                 xps_context->ref_frame[k].avframe = dst;
             }
+            /**
+            ************************************************************************
+            * @note     Export source packet to be decoded
+            ************************************************************************
+            */
+            xps_context->avc_meta.pkt = av_packet_clone(h->pkt_strm);
         }
-
-        /**
-          ************************************************************************
-          * @note 	Export source packet to be decoded
-          ************************************************************************
-        */
-        xps_context->avc_meta.pkt = av_packet_clone(h->pkt_strm);
 
         xps_context->header.state = IR_CONTEXT_STATE_READY;
         result = IR_XPS_EXPORT_STATUS_OK;
