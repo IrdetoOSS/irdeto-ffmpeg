@@ -1,0 +1,7 @@
+[submodule "external/irdeto-x264/source"]
+	path = external/irdeto-x264/source
+	url = https://github.com/mirror/x264.git
+[submodule "external/irdeto-x265/sources"]
+	path = external/irdeto-x265/sources
+	url = https://bitbucket.org/multicoreware/x265_git.git
+	branch = Release_3.5
