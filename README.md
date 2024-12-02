@@ -14,16 +14,35 @@ Based on FFmpeg 4.1 (https://github.com/FFmpeg/FFmpeg/tree/n4.1)
 ## Build requirements
 To build this project, folowing tools and libraries are reqired:
 
+### RedHat-family distributions
+
     git
+    gcc
     gcc-c++
     nasm
     cmake
     make
     patch
+    pkgconfig
     check-devel
     openjpeg2-devel
     openssl-devel
     libxml2-devel
+
+### Debian-family distributions
+
+    git
+    gcc
+    g++
+    nasm
+    cmake
+    make
+    patch
+    pkg-config
+    check
+    libopenjp2-7-dev
+    libssl-dev
+    libxml2-dev
 
 ## Build
 To build this project, please run:
@@ -36,8 +55,9 @@ To build this project, please run:
     git clone --recurse-submodules https://github.com/IrdetoOSS/irdeto-ffmpeg.git
     cd irdeto-ffmpeg
     mkdir build
-    cd build/
-    cmake3 ..
+    cd build
+    cmake ..
+    make
     make install
 
 ## Unit tests

@@ -7,8 +7,6 @@ get_filename_component(AVC_CBCS_SAMPLE2_BIN_FILE cenc_samples/sample2_cbcs.bin A
 
 get_filename_component(AVC_CENC_SAMPLE1_BIN_FILE cenc_samples/sample1_cenc.bin ABSOLUTE)
 
-
-
 get_filename_component(AVC_ANNEXB_EXTRDADA_BIN_FILE cenc_samples/extradata_annexb.bin ABSOLUTE)
 get_filename_component(AVC_ANNEXB_SAMPLE1_BIN_FILE cenc_samples/sample1_annexb.bin ABSOLUTE)
 get_filename_component(AVC_ANNEXB_SAMPLE2_BIN_FILE cenc_samples/sample2_annexb.bin ABSOLUTE)
@@ -20,6 +18,11 @@ get_filename_component(AVC_CENC_V3_SAMPLE1_FROM_ANNEXB_BIN_FILE cenc_samples/sam
 
 if(NOT CHECK_LIBS)
     find_library(CHECK_LIBS NAMES check)
+
+    find_library(SUBUNIT_LIB NAMES subunit)
+    if (SUBUNIT_LIB)
+        list(APPEND CHECK_LIBS ${SUBUNIT_LIB})
+    endif()
 endif()
 
 #----------------------------------------------------------
@@ -49,7 +52,7 @@ target_compile_options(test_cbcs PRIVATE -Wall -Wextra -std=c99 -D SUINT=int
                                          -DAVC_CBCS_SAMPLE2_FROM_ANNEXB_BIN_FILE="${AVC_CBCS_SAMPLE2_FROM_ANNEXB_BIN_FILE}"
                                      )
 add_dependencies(test_cbcs irffmpeg)
-target_link_libraries(test_cbcs ${CHECK_LIBS})
+target_link_libraries(test_cbcs ${CHECK_LIBS} m)
 add_test(test_cbcs test_cbcs)
 
 
@@ -77,7 +80,7 @@ target_compile_options(test_cencv3 PRIVATE -Wall -Wextra -std=c99 -D SUINT=int
                                          -DAVC_CENC_V3_SAMPLE1_FROM_ANNEXB_BIN_FILE="${AVC_CENC_V3_SAMPLE1_FROM_ANNEXB_BIN_FILE}"
                                      )
 add_dependencies(test_cencv3 irffmpeg)
-target_link_libraries(test_cencv3 ${CHECK_LIBS})
+target_link_libraries(test_cencv3 ${CHECK_LIBS} m)
 add_test(test_cencv3 test_cencv3)
 
 #----------------------------------------------------------
@@ -93,7 +96,7 @@ target_include_directories(test_avc_parser PRIVATE ${IR_PROJECT_DIR}/source
                           )
 target_compile_options(test_avc_parser PRIVATE -Wall -Wextra -std=c99 -D SUINT=int -DIRDETO_UNIT_TEST)
 add_dependencies(test_avc_parser irffmpeg)
-target_link_libraries(test_avc_parser ${CHECK_LIBS})
+target_link_libraries(test_avc_parser ${CHECK_LIBS} m)
 add_test(test_avc_parser test_avc_parser)
 
 
@@ -107,5 +110,5 @@ target_include_directories(test_ir_preserve_nonvcl PRIVATE
         ${X265_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/irx265 
         )
 target_compile_options(test_ir_preserve_nonvcl PRIVATE -Wall -Wextra -std=c99 -DSUINT=int -DIRDETO_UNIT_TEST)
-target_link_libraries(test_ir_preserve_nonvcl irffmpeg irxps ${CHECK_LIBS})
+target_link_libraries(test_ir_preserve_nonvcl irffmpeg irxps ${CHECK_LIBS} m)
 add_test(test_ir_preserve_nonvcl test_ir_preserve_nonvcl)
