@@ -36,6 +36,7 @@ ExternalProject_Add(
         --disable-opencl
         --disable-gpl
         --disable-lavf
+        --disable-avs
         $<$<CONFIG:Debug>:--prefix=${CMAKE_CURRENT_BINARY_DIR}/X264-prefix/src/X264-build/${CMAKE_INSTALL_PREFIX}>
         $<$<NOT:$<CONFIG:Debug>>:--prefix=${CMAKE_INSTALL_PREFIX}>
         --libdir=\\\${prefix}/${IR_LIBDIR}/
