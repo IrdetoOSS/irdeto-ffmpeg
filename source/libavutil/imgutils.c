@@ -108,6 +108,41 @@ int av_image_fill_linesizes(int linesizes[4], enum AVPixelFormat pix_fmt, int wi
     return 0;
 }
 
+int av_image_fill_plane_sizes(size_t sizes[4], enum AVPixelFormat pix_fmt,
+                              int height, const ptrdiff_t linesizes[4])
+{
+    int i, has_plane[4] = { 0 };
+
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
+    memset(sizes    , 0, sizeof(sizes[0])*4);
+
+    if (!desc || desc->flags & AV_PIX_FMT_FLAG_HWACCEL)
+        return AVERROR(EINVAL);
+
+    if (linesizes[0] > SIZE_MAX / height)
+        return AVERROR(EINVAL);
+    sizes[0] = linesizes[0] * (size_t)height;
+
+    if (desc->flags & AV_PIX_FMT_FLAG_PAL ||
+        desc->flags & FF_PSEUDOPAL) {
+        sizes[1] = 256 * 4; /* palette is stored here as 256 32 bits words */
+        return 0;
+    }
+
+    for (i = 0; i < 4; i++)
+        has_plane[desc->comp[i].plane] = 1;
+
+    for (i = 1; i < 4 && has_plane[i]; i++) {
+        int h, s = (i == 1 || i == 2) ? desc->log2_chroma_h : 0;
+        h = (height + (1 << s) - 1) >> s;
+        if (linesizes[i] > SIZE_MAX / h)
+            return AVERROR(EINVAL);
+        sizes[i] = (size_t)h * linesizes[i];
+    }
+
+    return 0;
+}
+
 int av_image_fill_pointers(uint8_t *data[4], enum AVPixelFormat pix_fmt, int height,
                            uint8_t *ptr, const int linesizes[4])
 {

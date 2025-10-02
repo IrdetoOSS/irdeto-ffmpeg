@@ -343,8 +343,18 @@ int ff_isom_write_av1c(AVIOContext *pb, const uint8_t *buf, int size)
             if (!obu_size) {
                 ret = AVERROR_INVALIDDATA;
                 goto fail;
+            } else {
+                int64_t metadata_type = 0;
+                ret = get_leb128_value(buf + start_pos, obu_size, &metadata_type);
+                if (ret < 0) {
+                    ret = AVERROR_INVALIDDATA;
+                    goto fail;
+                }
+                if (metadata_type >= AV1_METADATA_TYPE_HDR_CLL && metadata_type <= AV1_METADATA_TYPE_TIMECODE) {
+                    // Unregistered user private and reserved metadata will not be included into "av1C" box
+                    avio_write(meta_pb, buf, len);
+                }
             }
-            avio_write(meta_pb, buf, len);
             break;
         default:
             break;

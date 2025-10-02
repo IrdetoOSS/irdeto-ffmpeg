@@ -8,7 +8,8 @@ FILE(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/VERSION IR_VERSION)
 FILE(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/RELEASE IR_RELEASE)
 
 SET(IR_PROJECT_VERSION "${IR_VERSION}")
-SET(IR_PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+SET(IR_PROJECT_DIR     "${CMAKE_CURRENT_SOURCE_DIR}")
+SET(IR_PROJECT_PATCH   "${CMAKE_CURRENT_SOURCE_DIR}/irdeto-srt.patch")
 
 SET(IR_LIBDIR   ${CMAKE_INSTALL_LIBDIR}/irsrt)
 SET(IR_BINDIR   ${CMAKE_INSTALL_BINDIR}/irsrt)
@@ -21,20 +22,21 @@ include(ExternalProject)
 ExternalProject_Add(
         LIBSRT
         SOURCE_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/sources
+        PATCH_COMMAND     patch -p0 --forward -i "${IR_PROJECT_PATCH}" -d "${CMAKE_CURRENT_SOURCE_DIR}/sources" || true
         CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/sources/configure
-        --disable-apps
-        --disable-c++11
-        --enable-debug=0
-        --disable-shared
-        --enable-static
-        --prefix=${CMAKE_INSTALL_PREFIX}
-        BUILD_COMMAND   make VPATH=${CMAKE_CURRENT_SOURCE_DIR}/sources
-        INSTALL_COMMAND make install VPATH=${CMAKE_CURRENT_SOURCE_DIR}/sources DESTDIR=${LIBSRT_DESTDIR}
-        LOG_CONFIGURE   on
-        LOG_BUILD       on
-        LOG_INSTALL     on
-        BUILD_ALWAYS    1
-        BUILD_IN_SOURCE off
+                          --disable-apps
+                          --disable-c++11
+                          --enable-debug=0
+                          --disable-shared
+                          --enable-static
+                          --prefix=${CMAKE_INSTALL_PREFIX}
+        BUILD_COMMAND     make VPATH=${CMAKE_CURRENT_SOURCE_DIR}/sources
+        INSTALL_COMMAND   make install VPATH=${CMAKE_CURRENT_SOURCE_DIR}/sources DESTDIR=${LIBSRT_DESTDIR}
+        LOG_CONFIGURE     on
+        LOG_BUILD         on
+        LOG_INSTALL       on
+        BUILD_ALWAYS      on
+        BUILD_IN_SOURCE   off
 )
 
 ExternalProject_Get_Property(LIBSRT BINARY_DIR)
@@ -51,7 +53,8 @@ set(ENV{PKG_CONFIG_PATH} ${CMAKE_INSTALL_PREFIX}/${IR_LIBDIR}/pkgconfig/)
 check_required_components(${PROJECT_NAME})
 ")
 
-include( CMakePackageConfigHelpers)
+include(CMakePackageConfigHelpers)
+
 configure_package_config_file(
         ${CMAKE_CURRENT_BINARY_DIR}/project-config.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
@@ -62,7 +65,8 @@ configure_package_config_file(
 write_basic_package_version_file(
         ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
         VERSION ${IR_VERSION}
-        COMPATIBILITY SameMajorVersion)
+        COMPATIBILITY SameMajorVersion
+)
 
 install(FILES     ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake         DESTINATION ${IR_CMAKEDIR})
 install(FILES     ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake DESTINATION ${IR_CMAKEDIR})

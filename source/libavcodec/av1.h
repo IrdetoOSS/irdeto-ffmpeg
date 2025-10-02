@@ -46,6 +46,8 @@ enum {
     AV1_METADATA_TYPE_SCALABILITY = 3,
     AV1_METADATA_TYPE_ITUT_T35    = 4,
     AV1_METADATA_TYPE_TIMECODE    = 5,
+    AV1_METADATA_TYPE_WM_INFO     = 6, // User private type, reserved by Irdeto for watermark info
+    AV1_METADATA_TYPE_PADDING     = 7, // User private type, reserved by Irdeto for padding (instead of Padding OBU)
 };
 
 // Frame types (section 6.8.2).

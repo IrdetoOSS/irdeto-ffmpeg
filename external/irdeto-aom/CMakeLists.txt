@@ -9,6 +9,7 @@ FILE(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/RELEASE IR_RELEASE)
 
 SET(IR_PROJECT_VERSION "${IR_VERSION}")
 SET(IR_PROJECT_DIR     "${CMAKE_CURRENT_SOURCE_DIR}")
+SET(IR_PROJECT_PATCH   "${CMAKE_CURRENT_SOURCE_DIR}/irdeto-aom.patch")
 
 SET(IR_LIBDIR   ${CMAKE_INSTALL_LIBDIR}/iraom)
 SET(IR_BINDIR   ${CMAKE_INSTALL_BINDIR}/iraom)
@@ -30,6 +31,7 @@ ExternalProject_Add(
                    -DENABLE_TOOLS=0
                    -DENABLE_DOCS=0
                    -DCMAKE_INSTALL_PREFIX=/usr
+        PATCH_COMMAND   patch -p0 --forward -i "${IR_PROJECT_PATCH}" -d "${CMAKE_CURRENT_SOURCE_DIR}/sources" || true
         INSTALL_COMMAND make install DESTDIR=${LIBAOM_DESTDIR}
         LOG_CONFIGURE   on
         LOG_BUILD       on

@@ -14,13 +14,22 @@ add_subdirectory(./external/irdeto-x265)
 ExternalProject_Get_Property(X265_8BIT BINARY_DIR)
 set(X265_INSTALL_PREFIX ${BINARY_DIR}/${CMAKE_INSTALL_PREFIX})
 
+add_subdirectory(./external/irdeto-srt)
+ExternalProject_Get_Property(LIBSRT BINARY_DIR)
+set(LIBSRT_INSTALL_PREFIX ${BINARY_DIR}/${CMAKE_INSTALL_PREFIX})
+
+add_subdirectory(./external/irdeto-aom)
+ExternalProject_Get_Property(LIBAOM BINARY_DIR)
+set(LIBAOM_INSTALL_PREFIX ${BINARY_DIR}/${CMAKE_INSTALL_PREFIX})
+
 include(GNUInstallDirs)
 
 FILE(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/VERSION IR_VERSION)
 FILE(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/RELEASE IR_RELEASE)
 
 SET(IR_PROJECT_VERSION     "${IR_VERSION}-${IR_RELEASE}")
-SET(IR_PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+SET(IR_PROJECT_DIR         "${CMAKE_CURRENT_SOURCE_DIR}")
+SET(IR_PROJECT_EXTRA_LIBS  "-lirxps -lsrt -laom -ldl")
 
 SET(IR_LIBDIR       ${CMAKE_INSTALL_LIBDIR}/irffmpeg)
 SET(IR_BINDIR       ${CMAKE_INSTALL_BINDIR}/irffmpeg)
@@ -37,10 +46,12 @@ ExternalProject_Add(
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source
         CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/source/configure
             $<$<CONFIG:Debug>:--disable-optimizations>
-            --env=\\"PKG_CONFIG_PATH=${X264_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/irx264/pkgconfig:${X265_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/irx265/pkgconfig/\\"
+            --env=\\"PKG_CONFIG_PATH=${X264_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/irx264/pkgconfig/:${X265_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/irx265/pkgconfig/\\"
             --enable-libx264
             --enable-libx265
+            --enable-libaom
             --enable-libopenjpeg
+            --enable-libsrt
             --disable-sdl2
             --disable-gpl
             --disable-static
@@ -54,11 +65,14 @@ ExternalProject_Add(
             --enable-encoder=prores_ks
             --enable-demuxer=dash
             --enable-libxml2
+            --enable-rpath
+            --disable-avisynth
             --extra-cflags=-isystem${X265_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/irx265/
             --extra-cflags=-isystem${X264_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/irx264/
             --extra-cflags=-isystem${irdeto-xps-export-devel_DIR}/../${CMAKE_INSTALL_INCLUDEDIR}/
+            --extra-cflags=-isystem${LIBSRT_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/
+            --extra-cflags=-isystem${LIBAOM_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/
             --extra-cflags=-Wl,--no-undefined
-            --enable-rpath
             --extra-ldflags=-Wl,-rpath,${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/irx264/
             --extra-ldflags=-Wl,-rpath,${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/irx265/
             --extra-ldflags=-Wl,-rpath,${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/irxps/
@@ -68,10 +82,11 @@ ExternalProject_Add(
             --extra-ldflags=-L${X264_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/irx264/
             --extra-ldflags=-L${X265_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/irx265/
             --extra-ldflags=-L$<TARGET_LINKER_FILE_DIR:irxps>
+            --extra-ldflags=-L${LIBSRT_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/
+            --extra-ldflags=-L${LIBAOM_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/
             --extra-ldexeflags=-Wl,-rpath,${CMAKE_INSTALL_PREFIX}/${IR_LIBDIR}/
             --extra-ldexeflags=-Wl,-rpath,${CMAKE_CURRENT_BINARY_DIR}/FFMPEG-prefix/src/FFMPEG-build/${FFMPEG_INSTALL_DIR}/${CMAKE_INSTALL_PREFIX}/${IR_LIBDIR}/
-            --extra-libs=-lirxps
-            --extra-libs=-ldl
+            --extra-libs=${IR_PROJECT_EXTRA_LIBS}
             --prefix=${CMAKE_INSTALL_PREFIX}
             --libdir=${CMAKE_INSTALL_PREFIX}/${IR_LIBDIR}/
             --bindir=${CMAKE_INSTALL_PREFIX}/${IR_BINDIR}/
@@ -80,6 +95,8 @@ ExternalProject_Add(
         DEPENDS X264
         DEPENDS X265_8BIT
         DEPENDS irxps
+        DEPENDS LIBSRT
+        DEPENDS LIBAOM
         BUILD_COMMAND make -j${PROCN}
         INSTALL_COMMAND make install DESTDIR=${FFMPEG_INSTALL_DIR}
         LOG_CONFIGURE on
@@ -116,6 +133,8 @@ check_required_components(${PROJECT_NAME})
 find_package(irdeto-x264 REQUIRED CONFIG)
 find_package(irdeto-x265 REQUIRED CONFIG)
 find_package(irdeto-xps-export REQUIRED CONFIG)
+find_package(irdeto-srt REQUIRED CONFIG)
+find_package(irdeto-aom REQUIRED CONFIG)
 ")
 
 include ( CMakePackageConfigHelpers )

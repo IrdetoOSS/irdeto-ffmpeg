@@ -353,6 +353,16 @@ typedef struct AV1RawMetadataTimecode {
     uint32_t time_offset_value;
 } AV1RawMetadataTimecode;
 
+typedef struct AV1RawMetadataWmInfo {
+    uint8_t  uuid[16];
+    uint8_t  bit_value;
+    uint32_t bit_position;
+} AV1RawMetadataWmInfo;
+
+typedef struct AV1RawPadding {
+    size_t padding_size;
+} AV1RawPadding;
+
 typedef struct AV1RawMetadata {
     uint64_t metadata_type;
     union {
@@ -361,9 +371,10 @@ typedef struct AV1RawMetadata {
         AV1RawMetadataScalability scalability;
         AV1RawMetadataITUTT35     itut_t35;
         AV1RawMetadataTimecode    timecode;
+        AV1RawMetadataWmInfo      wm_info;
+        AV1RawPadding             padding;
     } metadata;
 } AV1RawMetadata;
-
 
 typedef struct AV1RawOBU {
     AV1RawOBUHeader header;
@@ -377,6 +388,7 @@ typedef struct AV1RawOBU {
         AV1RawTileGroup      tile_group;
         AV1RawTileList       tile_list;
         AV1RawMetadata       metadata;
+        AV1RawPadding        padding;
     } obu;
 } AV1RawOBU;
 

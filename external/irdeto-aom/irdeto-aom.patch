@@ -1,0 +1,30 @@
+diff -ur CMakeLists.txt CMakeLists.txt
+--- CMakeLists.txt	2025-10-02 14:57:08.796310751 +0200
++++ CMakeLists.txt	2025-10-02 12:03:16.603501441 +0200
+@@ -214,6 +214,9 @@
+   include_directories(${ANDROID_NDK}/sources/android/cpufeatures)
+ endif()
+ 
++# It is necessary to be compatible with "--enable-pic" building option of Irdeto FFmpeg
++append_compiler_flag("-fPIC")
++
+ # Targets
+ add_library(aom_version ${AOM_VERSION_SOURCES})
+ add_dummy_source_file_to_target(aom_version c)
+diff -ur build/cmake/pkg_config.cmake build/cmake/pkg_config.cmake
+--- build/cmake/pkg_config.cmake	2025-10-02 14:57:09.172027226 +0200
++++ build/cmake/pkg_config.cmake	2025-10-02 12:03:16.966859721 +0200
+@@ -42,10 +42,10 @@
+ set(pkgconfig_file "${AOM_CONFIG_DIR}/aom.pc")
+ string(TOLOWER ${CMAKE_PROJECT_NAME} pkg_name)
+ file(WRITE "${pkgconfig_file}" "# libaom pkg-config.\n")
+-file(APPEND "${pkgconfig_file}" "prefix=${prefix}\n")
++file(APPEND "${pkgconfig_file}" "prefix=/usr\n")
+ file(APPEND "${pkgconfig_file}" "exec_prefix=\${prefix}\n")
+-file(APPEND "${pkgconfig_file}" "includedir=\${prefix}/${includedir}\n")
+-file(APPEND "${pkgconfig_file}" "libdir=\${exec_prefix}/${libdir}\n\n")
++file(APPEND "${pkgconfig_file}" "includedir=\${prefix}/${includedir}/iraom\n")
++file(APPEND "${pkgconfig_file}" "libdir=\${exec_prefix}/${libdir}/iraom\n\n")
+ file(APPEND "${pkgconfig_file}" "Name: ${pkg_name}\n")
+ file(
+   APPEND "${pkgconfig_file}"

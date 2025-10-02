@@ -28,6 +28,7 @@
 #include "avcodec.h"
 #include "frame_thread_encoder.h"
 #include "internal.h"
+#include "encode.h"
 
 int ff_alloc_packet2(AVCodecContext *avctx, AVPacket *avpkt, int64_t size, int64_t min_size)
 {
@@ -351,6 +352,21 @@ int avcodec_encode_subtitle(AVCodecContext *avctx, uint8_t *buf, int buf_size,
     ret = avctx->codec->encode_sub(avctx, buf, buf_size, sub);
     avctx->frame_number++;
     return ret;
+}
+
+int ff_encode_get_frame(AVCodecContext *avctx, AVFrame *frame)
+{
+    AVCodecInternal *avci = avctx->internal;
+
+    if (avci->draining)
+        return AVERROR_EOF;
+
+    if (!avci->buffer_frame->buf[0])
+        return AVERROR(EAGAIN);
+
+    av_frame_move_ref(frame, avci->buffer_frame);
+
+    return 0;
 }
 
 static int do_encode(AVCodecContext *avctx, const AVFrame *frame, int *got_packet)

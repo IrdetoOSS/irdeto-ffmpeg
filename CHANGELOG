@@ -1,6 +1,13 @@
 Entries are sorted chronologically from oldest to youngest within each release,
 releases are sorted from youngest to oldest.
 
+version 6.35.410
+- Sync with internal release v6.35.410
+- Sync with irdeto-encoder-plugin v9.4.0
+- Added support for SRT via SRT SDK v1.5.1
+- Added support for AV1 via libaom v3.6.0
+- Added suuport for ARM building (aarch64)
+
 version 6.34.410
 - Sync with internal release v6.34.410
 - Sync with irdeto-encoder-plugin v9.1.0

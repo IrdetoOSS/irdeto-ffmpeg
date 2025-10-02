@@ -96,6 +96,19 @@ static inline int64_t leb128(GetBitContext *gb) {
     return ret;
 }
 
+static inline int get_leb128_value(const uint8_t *buf, int buf_size, int64_t *value)
+{
+    GetBitContext gb;
+
+    int ret = init_get_bits8(&gb, buf, FFMIN(buf_size, 8)); // max leb128 length
+    if (ret < 0)
+        return ret;
+
+    *value = leb128(&gb);
+
+    return 0;
+}
+
 static inline int parse_obu_header(const uint8_t *buf, int buf_size,
                                    int64_t *obu_size, int *start_pos, int *type,
                                    int *temporal_id, int *spatial_id)

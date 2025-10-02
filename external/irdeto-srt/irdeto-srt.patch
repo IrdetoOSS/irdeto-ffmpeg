@@ -1,0 +1,26 @@
+diff -ur CMakeLists.txt CMakeLists.txt
+--- CMakeLists.txt	2025-10-02 15:29:54.707391677 +0200
++++ CMakeLists.txt	2025-10-02 12:03:17.159868195 +0200
+@@ -1099,6 +1099,9 @@
+ 	endif()
+ endif()
+ 
++# It is necessary to be compatible with "--enable-pic" building option of Irdeto FFmpeg
++list(APPEND SRT_EXTRA_CFLAGS "-fPIC")
++
+ # ---
+ # That's all for target definition
+ # ---
+diff -ur scripts/srt.pc.in scripts/srt.pc.in
+--- scripts/srt.pc.in	2025-10-02 15:29:54.775186235 +0200
++++ scripts/srt.pc.in	2025-10-02 12:03:17.209609925 +0200
+@@ -1,7 +1,7 @@
+ prefix=@INSTALLDIR@
+ exec_prefix=${prefix}
+-libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+-includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
++libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@/irsrt
++includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/irsrt
+ 
+ Name: srt
+ Description: SRT library set

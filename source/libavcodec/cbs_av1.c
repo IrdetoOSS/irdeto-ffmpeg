@@ -1033,12 +1033,21 @@ static int cbs_av1_read_unit(CodedBitstreamContext *ctx,
         break;
     case AV1_OBU_METADATA:
         {
-            err = cbs_av1_read_metadata_obu(ctx, &gbc, &obu->obu.metadata);
+            err = cbs_av1_read_metadata_obu(ctx, &gbc, &obu->obu.metadata, obu->obu_size);
             if (err < 0)
                 return err;
         }
         break;
     case AV1_OBU_PADDING:
+        {
+            if (obu->obu_size < 1)
+                return AVERROR(ENOSYS);
+            obu->obu.padding.padding_size = obu->obu_size - 1;
+            err = cbs_av1_read_padding(ctx, &gbc, &obu->obu.padding);
+            if (err < 0)
+                return err;
+        }
+        break;
     default:
         return AVERROR(ENOSYS);
     }
@@ -1154,12 +1163,18 @@ static int cbs_av1_write_obu(CodedBitstreamContext *ctx,
         break;
     case AV1_OBU_METADATA:
         {
-            err = cbs_av1_write_metadata_obu(ctx, pbc, &obu->obu.metadata);
+            err = cbs_av1_write_metadata_obu(ctx, pbc, &obu->obu.metadata, 0);
             if (err < 0)
                 return err;
         }
         break;
     case AV1_OBU_PADDING:
+        {
+            err = cbs_av1_write_padding(ctx, pbc, &obu->obu.padding);
+            if (err < 0)
+                return err;
+        }
+        break;
     default:
         return AVERROR(ENOSYS);
     }

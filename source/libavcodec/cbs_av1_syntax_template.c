@@ -1730,12 +1730,75 @@ static int FUNC(metadata_timecode)(CodedBitstreamContext *ctx, RWContext *rw,
     return 0;
 }
 
-static int FUNC(metadata_obu)(CodedBitstreamContext *ctx, RWContext *rw,
-                              AV1RawMetadata *current)
+static int FUNC(metadata_wm_info)(CodedBitstreamContext *ctx, RWContext *rw,
+                                   AV1RawMetadataWmInfo *current)
 {
-    int err;
+    int err, i;
 
+    int is_irdeto  = 1;
+    int is_dash_if = 1;
+
+    uint8_t uuid_irdeto[16]  = { 0x40, 0x62, 0xB6, 0x99, 0x58, 0xC7, 0x44, 0x20, 0x81, 0xFA, 0x09, 0x10, 0x40, 0x88, 0x20, 0x77 };
+    uint8_t uuid_dash_if[16] = { 0xBE, 0xC4, 0xF8, 0x24, 0x17, 0x0D, 0x47, 0xCF, 0xA8, 0x26, 0xCE, 0x00, 0x80, 0x83, 0xE3, 0x55 };
+
+    for (i = 0; i < 16; i++) {
+        fb(8, uuid[i]);
+
+        if (current->uuid[i] != uuid_irdeto[i])
+            is_irdeto = 0;
+
+        if (current->uuid[i] != uuid_dash_if[i])
+            is_dash_if = 0;
+    }
+
+    if (is_irdeto)
+    {
+        HEADER("Watermarking Info (Irdeto Format)");
+        fixed(8, version, 2);
+        fixed(8, flags, 0);
+        fb(31, bit_position);
+        fb(1, bit_value);
+    }
+    else if (is_dash_if)
+    {
+        HEADER("Watermarking Info (DASH-IF Format)");
+        fixed(8, version, 1);
+        fb(8, bit_value);
+        fixed(1, emulation_1, 1);
+        fb(15, bit_position);
+        fixed(1, emulation_2, 1);
+        fixed(1, firstpart, 1);
+        fixed(1, lastpart, 1);
+        fixed(5, reserved, 0);
+    }
+    else
+        return AVERROR_PATCHWELCOME;
+
+    return 0;
+}
+
+static int FUNC(padding)(CodedBitstreamContext *ctx, RWContext *rw, AV1RawPadding *current)
+{
+    int err, i;
+
+    HEADER("Padding");
+    for (i = 0; i < current->padding_size; i ++)
+        fixed(8, padding_byte, 0xFF);
+
+    return 0;
+}
+
+static int FUNC(metadata_obu)(CodedBitstreamContext *ctx, RWContext *rw,
+                              AV1RawMetadata *current, size_t obu_size)
+{
+    int err, pos1, pos2;
+    size_t type_bytes_num;
+
+    HEADER("Metadata Header");
+    pos1 = get_bits_count(rw);
     leb128(metadata_type);
+    pos2 = get_bits_count(rw);
+    type_bytes_num = (pos2 - pos1) / 8;
 
     switch (current->metadata_type) {
     case AV1_METADATA_TYPE_HDR_CLL:
@@ -1752,6 +1815,19 @@ static int FUNC(metadata_obu)(CodedBitstreamContext *ctx, RWContext *rw,
         break;
     case AV1_METADATA_TYPE_TIMECODE:
         CHECK(FUNC(metadata_timecode)(ctx, rw, &current->metadata.timecode));
+        break;
+    case AV1_METADATA_TYPE_WM_INFO:
+        // Metadata OBU extention by Irdeto (watermark info)
+        CHECK(FUNC(metadata_wm_info)(ctx, rw, &current->metadata.wm_info));
+        break;
+    case AV1_METADATA_TYPE_PADDING:
+        // Metadata OBU extention by Irdeto (padding)
+#ifdef READ
+        if (obu_size < (type_bytes_num + 1))
+            return AVERROR(ENOSYS);
+        current->metadata.padding.padding_size = obu_size - type_bytes_num - 1;
+#endif
+        CHECK(FUNC(padding)(ctx, rw, &current->metadata.padding));
         break;
     default:
         // Unknown metadata type.
