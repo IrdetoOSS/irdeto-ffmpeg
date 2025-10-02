@@ -6,6 +6,10 @@
 	path = external/irdeto-x265/sources
 	url = https://bitbucket.org/multicoreware/x265_git.git
 	branch = Release_3.5
+[submodule "external/irdeto-srt/sources"]
+	path = external/irdeto-srt/sources
+	url = https://github.com/Haivision/srt.git
+	branch = v1.5.1
 [submodule "external/irdeto-aom/sources"]
 	path = external/irdeto-aom/sources
 	url = https://aomedia.googlesource.com/aom
