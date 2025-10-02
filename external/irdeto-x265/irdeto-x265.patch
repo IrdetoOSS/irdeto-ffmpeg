@@ -1,10 +1,10 @@
 diff -ur x265.h x265.h
 --- x265.h	2024-11-27 23:02:07.340778085 +0100
 +++ x265.h	2024-11-27 22:58:31.013685335 +0100
-@@ -2344,6 +2344,16 @@
-     /*Frame level RateControl Configuration*/
-     int     bConfigRCFrame;
-     int    isAbrLadderEnable;
+@@ -1953,6 +1953,16 @@
+ 
+     /* The offset by which QP is incremented for non-referenced inter-frames before a scenecut when bEnableSceneCutAwareQp is 2 or 3. */
+     double    bwdNonRefQpDelta;
 +
 +    /*== Irdeto specific parameters ==*/
 +    int bIrdetoExtension;
