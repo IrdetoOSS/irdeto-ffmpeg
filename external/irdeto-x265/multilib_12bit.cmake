@@ -20,10 +20,10 @@ ExternalProject_Add(
         LOG_BUILD on
         LOG_CONFIGURE on
         LOG_INSTALL on
-        BUILD_ALWAYS on
+        BUILD_ALWAYS off
 )
 ExternalProject_Add_Step(X265_12BIT forcebuild
         COMMAND ${CMAKE_COMMAND} -E echo "Force build of X265_12BIT"
         DEPENDEES configure
         DEPENDERS build
-        ALWAYS 1)
+        ALWAYS on)

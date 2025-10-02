@@ -14,12 +14,9 @@ diff -ur CMakeLists.txt CMakeLists.txt
 diff -ur build/cmake/pkg_config.cmake build/cmake/pkg_config.cmake
 --- build/cmake/pkg_config.cmake	2025-10-02 14:57:09.172027226 +0200
 +++ build/cmake/pkg_config.cmake	2025-10-02 12:03:16.966859721 +0200
-@@ -42,10 +42,10 @@
- set(pkgconfig_file "${AOM_CONFIG_DIR}/aom.pc")
- string(TOLOWER ${CMAKE_PROJECT_NAME} pkg_name)
+@@ -44,8 +44,8 @@
  file(WRITE "${pkgconfig_file}" "# libaom pkg-config.\n")
--file(APPEND "${pkgconfig_file}" "prefix=${prefix}\n")
-+file(APPEND "${pkgconfig_file}" "prefix=/usr\n")
+ file(APPEND "${pkgconfig_file}" "prefix=${prefix}\n")
  file(APPEND "${pkgconfig_file}" "exec_prefix=\${prefix}\n")
 -file(APPEND "${pkgconfig_file}" "includedir=\${prefix}/${includedir}\n")
 -file(APPEND "${pkgconfig_file}" "libdir=\${exec_prefix}/${libdir}\n\n")

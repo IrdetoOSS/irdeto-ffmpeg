@@ -50,7 +50,7 @@ ExternalProject_Add(
         LOG_CONFIGURE on
         LOG_BUILD on
         LOG_INSTALL on
-        BUILD_ALWAYS on
+        BUILD_ALWAYS off
         BUILD_IN_SOURCE off
 )
 ExternalProject_Get_Property(X264 BINARY_DIR)

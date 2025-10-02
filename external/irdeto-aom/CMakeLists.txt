@@ -30,13 +30,13 @@ ExternalProject_Add(
                    -DENABLE_TESTS=0
                    -DENABLE_TOOLS=0
                    -DENABLE_DOCS=0
-                   -DCMAKE_INSTALL_PREFIX=/usr
+                   -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
         PATCH_COMMAND   patch -p0 --forward -i "${IR_PROJECT_PATCH}" -d "${CMAKE_CURRENT_SOURCE_DIR}/sources" || true
         INSTALL_COMMAND make install DESTDIR=${LIBAOM_DESTDIR}
         LOG_CONFIGURE   on
         LOG_BUILD       on
         LOG_INSTALL     on
-        BUILD_ALWAYS    on
+        BUILD_ALWAYS    off
         BUILD_IN_SOURCE off
 )
 

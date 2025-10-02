@@ -56,8 +56,8 @@ ExternalProject_Add(
         LOG_BUILD on
         LOG_CONFIGURE on
         LOG_INSTALL on
-        BUILD_ALWAYS on
-        CONFIGURE_ALWAYS on
+        BUILD_ALWAYS off
+        CONFIGURE_ALWAYS off
         DEPENDS X265_10BIT
         DEPENDS X265_12BIT
 )
