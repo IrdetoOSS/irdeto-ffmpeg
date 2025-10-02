@@ -6,3 +6,7 @@
 	path = external/irdeto-x265/sources
 	url = https://bitbucket.org/multicoreware/x265_git.git
 	branch = Release_3.5
+[submodule "external/irdeto-aom/sources"]
+	path = external/irdeto-aom/sources
+	url = https://aomedia.googlesource.com/aom
+	branch = tags/v3.6.0
