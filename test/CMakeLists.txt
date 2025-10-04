@@ -36,7 +36,7 @@ add_executable(test_cbcs test_cbcs.c main.c test_mock.c
               )
 
 target_include_directories(test_cbcs PRIVATE ${IR_PROJECT_DIR}/source
-                                             ${IR_PROJECT_DIR}/source/compat/avisynth/avs
+                                             ${IR_PROJECT_OUTDIR}
                           )
 target_compile_options(test_cbcs PRIVATE -Wall -Wextra -std=c99 -D SUINT=int
                                          -DAVC_NON_ANNEXB_EXTRDADA_BIN_FILE="${AVC_NON_ANNEXB_EXTRDADA_BIN_FILE}"
@@ -68,7 +68,7 @@ add_executable(test_cencv3 test_cencv3.c main.c test_mock.c
               )
 
 target_include_directories(test_cencv3 PRIVATE ${IR_PROJECT_DIR}/source
-                                               ${IR_PROJECT_DIR}/source/compat/avisynth/avs
+                                               ${IR_PROJECT_OUTDIR}
                           )
 target_compile_options(test_cencv3 PRIVATE -Wall -Wextra -std=c99 -D SUINT=int
                                          -DAVC_NON_ANNEXB_EXTRDADA_BIN_FILE="${AVC_NON_ANNEXB_EXTRDADA_BIN_FILE}"
@@ -92,7 +92,7 @@ add_executable(test_avc_parser test_avc_parser.c main.c test_mock.c
                 )
 target_include_directories(test_avc_parser PRIVATE ${IR_PROJECT_DIR}/source
                                                    ${IR_PROJECT_DIR}/source/libavutil
-                                                   ${IR_PROJECT_DIR}/source/compat/avisynth/avs
+                                                   ${IR_PROJECT_OUTDIR}
                           )
 target_compile_options(test_avc_parser PRIVATE -Wall -Wextra -std=c99 -D SUINT=int -DIRDETO_UNIT_TEST)
 add_dependencies(test_avc_parser irffmpeg)
