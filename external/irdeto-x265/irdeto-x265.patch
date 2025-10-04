@@ -549,6 +549,27 @@ diff -ur common/aarch64/sad-a.S common/aarch64/sad-a.S
      mov             x9, #FENC_STRIDE
      SAD_X_START_8 \x
  .rept \h - 1
+diff -ur common/pixel.cpp common/pixel.cpp
+--- common/pixel.cpp	2025-10-04 11:35:42.639766147 +0200
++++ common/pixel.cpp	2025-10-02 12:03:17.387956799 +0200
+@@ -267,7 +267,7 @@
+     int satd = 0;
+ 
+ #if ENABLE_ASSEMBLY && X265_ARCH_ARM64
+-    pixelcmp_t satd_4x4 = x265_pixel_satd_4x4_neon;
++    pixelcmp_t satd_4x4 = PFX(pixel_satd_4x4_neon);
+ #endif
+ 
+     for (int row = 0; row < h; row += 4)
+@@ -285,7 +285,7 @@
+     int satd = 0;
+ 
+ #if ENABLE_ASSEMBLY && X265_ARCH_ARM64
+-    pixelcmp_t satd_8x4 = x265_pixel_satd_8x4_neon;
++    pixelcmp_t satd_8x4 = PFX(pixel_satd_8x4_neon);
+ #endif
+ 
+     for (int row = 0; row < h; row += 4)
 diff -ur encoder/CMakeLists.txt encoder/CMakeLists.txt
 --- encoder/CMakeLists.txt	2024-11-26 19:46:40.836947787 +0100
 +++ encoder/CMakeLists.txt	2024-11-26 17:45:42.224503187 +0100
