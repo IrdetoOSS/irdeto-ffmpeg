@@ -21,7 +21,7 @@ diff -ur x265.h x265.h
 diff -ur CMakeLists.txt CMakeLists.txt
 --- CMakeLists.txt	2024-11-27 17:57:41.704194171 +0100
 +++ CMakeLists.txt	2024-11-27 17:56:49.704364472 +0100
-@@ -530,19 +530,22 @@
+@@ -370,19 +370,22 @@
  endif()
  
  # Build options
@@ -45,9 +45,37 @@ diff -ur CMakeLists.txt CMakeLists.txt
 +endif()
 +mark_as_advanced(EXTRA_LIB EXTRA_LIB_10BIT EXTRA_LIB_12BIT EXTRA_LINK_FLAGS)
  
- if(X64 OR ARM64 OR PPC64)
+ if(X64)
      # NOTE: We only officially support high-bit-depth compiles of x265
-@@ -809,6 +812,12 @@
+@@ -440,6 +443,18 @@
+ endif()
+ add_definitions(-DX265_NS=${X265_NS})
+ 
++if(ARM64)
++  if(HIGH_BIT_DEPTH)
++    if(MAIN12)
++      list(APPEND ASM_FLAGS -DHIGH_BIT_DEPTH=1 -DBIT_DEPTH=12 -DX265_NS=${X265_NS})
++    else()
++      list(APPEND ASM_FLAGS -DHIGH_BIT_DEPTH=1 -DBIT_DEPTH=10 -DX265_NS=${X265_NS})
++    endif()
++  else()
++    list(APPEND ASM_FLAGS -DHIGH_BIT_DEPTH=0 -DBIT_DEPTH=8 -DX265_NS=${X265_NS})
++  endif()
++endif(ARM64)
++
+ option(WARNINGS_AS_ERRORS "Stop compiles on first warning" OFF)
+ if(WARNINGS_AS_ERRORS)
+     if(GCC)
+@@ -546,7 +561,7 @@
+             add_custom_command(
+                 OUTPUT ${ASM}.${SUFFIX}
+                 COMMAND ${CMAKE_CXX_COMPILER}
+-                ARGS ${ARM_ARGS} -c ${ASM_SRC} -o ${ASM}.${SUFFIX}
++                ARGS ${ARM_ARGS} ${ASM_FLAGS} -c ${ASM_SRC} -o ${ASM}.${SUFFIX}
+                 DEPENDS ${ASM_SRC})
+         endforeach()
+     elseif(X86)
+@@ -576,6 +591,12 @@
  if(EXTRA_LIB)
      target_link_libraries(x265-static ${EXTRA_LIB})
  endif()
@@ -60,7 +88,7 @@ diff -ur CMakeLists.txt CMakeLists.txt
  if(ENABLE_LIBVMAF)
      target_link_libraries(x265-static ${VMAF})
  endif()
-@@ -831,7 +840,7 @@
+@@ -598,7 +619,7 @@
      install(FILES "${SVT_HEVC_LIBRARY}" DESTINATION ${LIB_INSTALL_DIR})
  endif()
  
@@ -68,8 +96,8 @@ diff -ur CMakeLists.txt CMakeLists.txt
 +install(FILES x265.h "${PROJECT_BINARY_DIR}/x265_config.h" DESTINATION ${INCLUDE_INSTALL_DIR})
  if((WIN32 AND ENABLE_CLI) OR (WIN32 AND ENABLE_SHARED))
      if(MSVC_IDE)
-         if(ENABLE_CLI)
-@@ -890,7 +899,13 @@
+         install(FILES "${PROJECT_BINARY_DIR}/Debug/x265.pdb" DESTINATION ${BIN_INSTALL_DIR} CONFIGURATIONS Debug)
+@@ -649,7 +670,13 @@
      if(EXTRA_LIB)
          target_link_libraries(x265-shared ${EXTRA_LIB})
      endif()
@@ -105,6 +133,422 @@ diff -ur common/CMakeLists.txt common/CMakeLists.txt
  
  if(ENABLE_ASSEMBLY)
      set_source_files_properties(threading.cpp primitives.cpp pixel.cpp PROPERTIES COMPILE_FLAGS -DENABLE_ASSEMBLY=1)
+diff -ur common/aarch64/asm.S common/aarch64/asm.S
+--- common/aarch64/asm.S	2025-10-04 11:35:42.603535636 +0200
++++ common/aarch64/asm.S	2025-10-02 12:03:17.366672569 +0200
+@@ -23,6 +23,10 @@
+ 
+ .arch           armv8-a
+ 
++#define PFX3(prefix, name) prefix ## _ ## name
++#define PFX2(prefix, name) PFX3(prefix, name)
++#define PFX(name)          PFX2(X265_NS, name)
++
+ #ifdef PREFIX
+ #define EXTERN_ASM _
+ #else
+diff -ur common/aarch64/ipfilter8.h common/aarch64/ipfilter8.h
+--- common/aarch64/ipfilter8.h	2025-10-04 11:35:42.604564117 +0200
++++ common/aarch64/ipfilter8.h	2025-10-02 12:03:17.367120954 +0200
+@@ -25,31 +25,31 @@
+ #define X265_IPFILTER8_AARCH64_H
+ 
+ 
+-void x265_interp_8tap_horiz_ps_4x4_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_4x8_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_4x16_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_8x4_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_8x8_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_8x16_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_8x32_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_12x16_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_16x4_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_16x8_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_16x12_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_16x16_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_16x32_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_16x64_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_24x32_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_32x8_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_32x16_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_32x24_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_32x32_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_32x64_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_48x64_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_64x16_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_64x32_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_64x48_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+-void x265_interp_8tap_horiz_ps_64x64_neon(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_4x4_neon)   (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_4x8_neon)   (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_4x16_neon)  (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_8x4_neon)   (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_8x8_neon)   (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_8x16_neon)  (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_8x32_neon)  (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_12x16_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_16x4_neon)  (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_16x8_neon)  (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_16x12_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_16x16_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_16x32_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_16x64_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_24x32_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_32x8_neon)  (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_32x16_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_32x24_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_32x32_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_32x64_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_48x64_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_64x16_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_64x32_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_64x48_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
++void PFX(interp_8tap_horiz_ps_64x64_neon) (const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt);
+ 
+ 
+ #endif // ifndef X265_IPFILTER8_AARCH64_H
+diff -ur common/aarch64/ipfilter8.S common/aarch64/ipfilter8.S
+--- common/aarch64/ipfilter8.S	2025-10-04 11:35:42.603843165 +0200
++++ common/aarch64/ipfilter8.S	2025-10-02 12:03:17.366919531 +0200
+@@ -353,7 +353,7 @@
+ 
+ // void interp_horiz_ps_c(const pixel* src, intptr_t srcStride, int16_t* dst, intptr_t dstStride, int coeffIdx, int isRowExt)
+ .macro LUMA_HPS w h
+-function x265_interp_8tap_horiz_ps_\w\()x\h\()_neon
++function PFX(interp_8tap_horiz_ps_\w\()x\h\()_neon)
+     mov             w10, #\h
+     cmp             w5, #0
+     b.eq            6f
+diff -ur common/aarch64/mc-a.S common/aarch64/mc-a.S
+--- common/aarch64/mc-a.S	2025-10-04 11:35:42.605487477 +0200
++++ common/aarch64/mc-a.S	2025-10-02 12:03:17.367307040 +0200
+@@ -30,7 +30,7 @@
+ .text
+ 
+ .macro pixel_avg_pp_4xN_neon h
+-function x265_pixel_avg_pp_4x\h\()_neon
++function PFX(pixel_avg_pp_4x\h\()_neon)
+ .rept \h
+     ld1             {v0.s}[0], [x2], x3
+     ld1             {v1.s}[0], [x4], x5
+@@ -46,7 +46,7 @@
+ pixel_avg_pp_4xN_neon 16
+ 
+ .macro pixel_avg_pp_8xN_neon h
+-function x265_pixel_avg_pp_8x\h\()_neon
++function PFX(pixel_avg_pp_8x\h\()_neon)
+ .rept \h
+     ld1             {v0.8b}, [x2], x3
+     ld1             {v1.8b}, [x4], x5
+diff -ur common/aarch64/pixel-util.h common/aarch64/pixel-util.h
+--- common/aarch64/pixel-util.h	2025-10-04 11:35:42.607059248 +0200
++++ common/aarch64/pixel-util.h	2025-10-02 12:03:17.367617798 +0200
+@@ -25,16 +25,16 @@
+ #ifndef X265_PIXEL_UTIL_AARCH64_H
+ #define X265_PIXEL_UTIL_AARCH64_H
+ 
+-int x265_pixel_satd_4x4_neon(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
+-int x265_pixel_satd_4x8_neon(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
+-int x265_pixel_satd_4x16_neon(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
+-int x265_pixel_satd_4x32_neon(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
+-int x265_pixel_satd_8x4_neon(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
+-int x265_pixel_satd_8x8_neon(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
+-int x265_pixel_satd_12x16_neon(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
+-int x265_pixel_satd_12x32_neon(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
++int PFX(pixel_satd_4x4_neon)   (const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
++int PFX(pixel_satd_4x8_neon)   (const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
++int PFX(pixel_satd_4x16_neon)  (const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
++int PFX(pixel_satd_4x32_neon)  (const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
++int PFX(pixel_satd_8x4_neon)   (const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
++int PFX(pixel_satd_8x8_neon)   (const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
++int PFX(pixel_satd_12x16_neon) (const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
++int PFX(pixel_satd_12x32_neon) (const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2);
+ 
+-uint32_t x265_quant_neon(const int16_t* coef, const int32_t* quantCoeff, int32_t* deltaU, int16_t* qCoef, int qBits, int add, int numCoeff);
++uint32_t PFX(quant_neon)(const int16_t* coef, const int32_t* quantCoeff, int32_t* deltaU, int16_t* qCoef, int qBits, int add, int numCoeff);
+ int PFX(psyCost_4x4_neon)(const pixel* source, intptr_t sstride, const pixel* recon, intptr_t rstride);
+ 
+ #endif // ifndef X265_PIXEL_UTIL_AARCH64_H
+diff -ur common/aarch64/pixel-util.S common/aarch64/pixel-util.S
+--- common/aarch64/pixel-util.S	2025-10-04 11:35:42.606809193 +0200
++++ common/aarch64/pixel-util.S	2025-10-02 12:03:17.367459531 +0200
+@@ -30,7 +30,7 @@
+ 
+ .text
+ 
+-.macro x265_satd_4x8_8x4_end_neon
++.macro PFX(satd_4x8_8x4_end_neon)
+     add             v0.8h, v4.8h, v6.8h
+     add             v1.8h, v5.8h, v7.8h
+     sub             v2.8h, v4.8h, v6.8h
+@@ -84,12 +84,12 @@
+     usubl           v3.8h, v6.8b, v7.8b
+     add         v6.8h, v2.8h, v3.8h
+     sub         v7.8h, v2.8h, v3.8h
+-    x265_satd_4x8_8x4_end_neon
++    PFX(satd_4x8_8x4_end_neon)
+ .endm
+ 
+ // template<int w, int h>
+ // int satd4(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2)
+-function x265_pixel_satd_4x8_neon
++function PFX(pixel_satd_4x8_neon)
+     pixel_satd_4x8_neon
+     mov               w0, v0.s[0]
+     ret
+@@ -97,7 +97,7 @@
+ 
+ // template<int w, int h>
+ // int satd4(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2)
+-function x265_pixel_satd_4x16_neon
++function PFX(pixel_satd_4x16_neon)
+     eor             w4, w4, w4
+     pixel_satd_4x8_neon
+     mov               w5, v0.s[0]
+@@ -110,7 +110,7 @@
+ 
+ // template<int w, int h>
+ // int satd4(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2)
+-function x265_pixel_satd_4x32_neon
++function PFX(pixel_satd_4x32_neon)
+     eor             w4, w4, w4
+ .rept 4
+     pixel_satd_4x8_neon
+@@ -123,7 +123,7 @@
+ 
+ // template<int w, int h>
+ // int satd4(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2)
+-function x265_pixel_satd_12x16_neon
++function PFX(pixel_satd_12x16_neon)
+     mov             x4, x0
+     mov             x5, x2
+     eor             w7, w7, w7
+@@ -156,7 +156,7 @@
+ 
+ // template<int w, int h>
+ // int satd4(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2)
+-function x265_pixel_satd_12x32_neon
++function PFX(pixel_satd_12x32_neon)
+     mov             x4, x0
+     mov             x5, x2
+     eor             w7, w7, w7
+@@ -188,7 +188,7 @@
+ 
+ // template<int w, int h>
+ // int satd4(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2)
+-function x265_pixel_satd_8x8_neon
++function PFX(pixel_satd_8x8_neon)
+     eor             w4, w4, w4
+     mov             x6, x0
+     mov             x7, x2
+@@ -204,7 +204,7 @@
+ endfunc
+ 
+ // int psyCost_pp(const pixel* source, intptr_t sstride, const pixel* recon, intptr_t rstride)
+-function x265_psyCost_4x4_neon
++function PFX(psyCost_4x4_neon)
+     ld1r            {v4.2s}, [x0], x1
+     ld1r            {v5.2s}, [x0], x1
+     ld1             {v4.s}[1], [x0], x1
+@@ -286,7 +286,7 @@
+ endfunc
+ 
+ // uint32_t quant_c(const int16_t* coef, const int32_t* quantCoeff, int32_t* deltaU, int16_t* qCoef, int qBits, int add, int numCoeff)
+-function x265_quant_neon
++function PFX(quant_neon)
+     mov             w9, #1
+     lsl             w9, w9, w4
+     dup             v0.2s, w9
+@@ -398,14 +398,14 @@
+ .endm
+ 
+ // int satd_4x4(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2)
+-function x265_pixel_satd_4x4_neon
++function PFX(pixel_satd_4x4_neon)
+     satd_4x4_neon
+     umov            x0, v0.d[0]
+     ret
+ endfunc
+ 
+ // int satd_8x4(const pixel* pix1, intptr_t stride_pix1, const pixel* pix2, intptr_t stride_pix2)
+-function x265_pixel_satd_8x4_neon
++function PFX(pixel_satd_8x4_neon)
+     mov             x4, x0
+     mov             x5, x2
+     satd_4x4_neon
+diff -ur common/aarch64/pixel.h common/aarch64/pixel.h
+--- common/aarch64/pixel.h	2025-10-04 11:35:42.607695314 +0200
++++ common/aarch64/pixel.h	2025-10-02 12:03:17.367802128 +0200
+@@ -24,82 +24,82 @@
+ #ifndef X265_I386_PIXEL_AARCH64_H
+ #define X265_I386_PIXEL_AARCH64_H
+ 
+-void x265_pixel_avg_pp_4x4_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_4x8_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_4x16_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_8x4_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_8x8_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_8x16_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_8x32_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_12x16_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_16x4_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_16x8_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_16x12_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_16x16_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_16x32_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_16x64_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_24x32_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_32x8_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_32x16_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_32x24_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_32x32_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_32x64_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_48x64_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_64x16_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_64x32_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_64x48_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+-void x265_pixel_avg_pp_64x64_neon (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_4x4_neon)   (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_4x8_neon)   (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_4x16_neon)  (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_8x4_neon)   (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_8x8_neon)   (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_8x16_neon)  (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_8x32_neon)  (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_12x16_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_16x4_neon)  (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_16x8_neon)  (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_16x12_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_16x16_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_16x32_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_16x64_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_24x32_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_32x8_neon)  (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_32x16_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_32x24_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_32x32_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_32x64_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_48x64_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_64x16_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_64x32_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_64x48_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
++void PFX(pixel_avg_pp_64x64_neon) (pixel* dst, intptr_t dstride, const pixel* src0, intptr_t sstride0, const pixel* src1, intptr_t sstride1, int);
+ 
+-void x265_sad_x3_4x4_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_4x8_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_4x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_8x4_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_8x8_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_8x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_8x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_12x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_16x4_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_16x8_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_16x12_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_16x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_16x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_16x64_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_24x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_32x8_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_32x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_32x24_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_32x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_32x64_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_48x64_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_64x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_64x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_64x48_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+-void x265_sad_x3_64x64_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_4x4_neon)   (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_4x8_neon)   (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_4x16_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_8x4_neon)   (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_8x8_neon)   (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_8x16_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_8x32_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_12x16_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_16x4_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_16x8_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_16x12_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_16x16_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_16x32_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_16x64_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_24x32_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_32x8_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_32x16_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_32x24_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_32x32_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_32x64_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_48x64_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_64x16_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_64x32_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_64x48_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
++void PFX(sad_x3_64x64_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, intptr_t frefstride, int32_t* res);
+ 
+-void x265_sad_x4_4x4_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_4x8_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_4x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_8x4_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_8x8_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_8x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_8x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_12x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_16x4_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_16x8_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_16x12_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_16x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_16x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_16x64_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_24x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_32x8_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_32x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_32x24_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_32x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_32x64_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_48x64_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_64x16_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_64x32_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_64x48_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+-void x265_sad_x4_64x64_neon(const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_4x4_neon)   (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_4x8_neon)   (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_4x16_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_8x4_neon)   (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_8x8_neon)   (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_8x16_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_8x32_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_12x16_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_16x4_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_16x8_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_16x12_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_16x16_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_16x32_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_16x64_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_24x32_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_32x8_neon)  (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_32x16_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_32x24_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_32x32_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_32x64_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_48x64_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_64x16_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_64x32_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_64x48_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
++void PFX(sad_x4_64x64_neon) (const pixel* fenc, const pixel* fref0, const pixel* fref1, const pixel* fref2, const pixel* fref3, intptr_t frefstride, int32_t* res);
+ 
+ #endif // ifndef X265_I386_PIXEL_AARCH64_H
+diff -ur common/aarch64/sad-a.S common/aarch64/sad-a.S
+--- common/aarch64/sad-a.S	2025-10-04 11:35:42.608062551 +0200
++++ common/aarch64/sad-a.S	2025-10-02 12:03:17.367954106 +0200
+@@ -70,7 +70,7 @@
+ .endm
+ 
+ .macro SAD_X_8xN x, h
+-function x265_sad_x\x\()_8x\h\()_neon
++function PFX(sad_x\x\()_8x\h\()_neon)
+     mov             x9, #FENC_STRIDE
+     SAD_X_START_8 \x
+ .rept \h - 1
 diff -ur encoder/CMakeLists.txt encoder/CMakeLists.txt
 --- encoder/CMakeLists.txt	2024-11-26 19:46:40.836947787 +0100
 +++ encoder/CMakeLists.txt	2024-11-26 17:45:42.224503187 +0100
@@ -126,6 +570,104 @@ diff -ur encoder/CMakeLists.txt encoder/CMakeLists.txt
  
  add_library(encoder OBJECT ../x265.h
      analysis.cpp analysis.h
+diff -ur encoder/encoder.cpp encoder/encoder.cpp
+--- encoder/encoder.cpp	2025-10-04 11:35:42.608062551 +0200
++++ encoder/encoder.cpp	2025-10-02 12:03:17.367954106 +0200
+@@ -3310,21 +3336,29 @@
+         char *opts = x265_param2string(m_param, m_sps.conformanceWindow.rightOffset, m_sps.conformanceWindow.bottomOffset);
+         if (opts)
+         {
+-            char *buffer = X265_MALLOC(char, strlen(opts) + strlen(PFX(version_str)) +
++            uint8_t *payload = X265_MALLOC(uint8_t, ISO_IEC_11578_LEN + strlen(opts) + strlen(PFX(version_str)) +
+                 strlen(PFX(build_info_str)) + 200);
+-            if (buffer)
++            if (payload)
+             {
++                /* x265's identifying GUID */
++                const uint8_t uuid_iso_iec_11578[ISO_IEC_11578_LEN] = {
++                    0x2C, 0xA2, 0xDE, 0x09, 0xB5, 0x17, 0x47, 0xDB,
++                    0xBB, 0x55, 0xA4, 0xFE, 0x7F, 0xC2, 0xFC, 0x4E
++                };
++                char *buffer = (char *) (payload + ISO_IEC_11578_LEN);
++
++                memcpy(payload, uuid_iso_iec_11578, ISO_IEC_11578_LEN);
+                 sprintf(buffer, "x265 (build %d) - %s:%s - H.265/HEVC codec - "
+                     "Copyright 2013-2018 (c) Multicoreware, Inc - "
+                     "http://x265.org - options: %s",
+                     X265_BUILD, PFX(version_str), PFX(build_info_str), opts);
+ 
+                 SEIuserDataUnregistered idsei;
+-                idsei.m_userData = (uint8_t*)buffer;
+-                idsei.setSize((uint32_t)strlen(buffer));
++                idsei.m_userData = payload;
++                idsei.setSize(ISO_IEC_11578_LEN + strlen(buffer));
+                 idsei.writeSEImessages(bs, m_sps, NAL_UNIT_PREFIX_SEI, list, m_param->bSingleSeiNal);
+ 
+-                X265_FREE(buffer);
++                X265_FREE(payload);
+             }
+ 
+             X265_FREE(opts);
+diff -ur encoder/frameencoder.cpp encoder/frameencoder.cpp
+--- encoder/frameencoder.cpp	2025-10-04 11:35:42.767498213 +0200
++++ encoder/frameencoder.cpp	2025-10-02 12:03:17.462727077 +0200
+@@ -781,6 +905,8 @@
+         }
+         else
+             x265_log(m_param, X265_LOG_ERROR, "Unrecognized SEI type\n");
++
++        delete[] m_frame->m_userSEI.payloads[i].payload;
+     }
+ 
+     bool isSei = ((m_frame->m_lowres.bKeyframe && m_param->bRepeatHeaders) || m_param->bEmitHRDSEI ||
+@@ -792,6 +918,15 @@
+         m_bs.writeByteAlignment();
+         m_nalList.serialize(NAL_UNIT_PREFIX_SEI, m_bs);
+     }
++
++    if (m_frame->m_userSEI.numPayloads)
++    {
++        delete[] m_frame->m_userSEI.payloads;
++
++        m_frame->m_userSEI.payloads = NULL;
++        m_frame->m_userSEI.numPayloads = 0;
++    }
++
+     /* CQP and CRF (without capped VBV) doesn't use mid-frame statistics to 
+      * tune RateControl parameters for other frames.
+      * Hence, for these modes, update m_startEndOrder and unlock RC for previous threads waiting in
+diff -ur encoder/sei.cpp encoder/sei.cpp
+--- encoder/sei.cpp	2025-10-04 11:35:42.786947707 +0200
++++ encoder/sei.cpp	2025-10-02 12:03:17.469435708 +0200
+@@ -28,12 +28,6 @@
+ 
+ using namespace X265_NS;
+ 
+-/* x265's identifying GUID */
+-const uint8_t SEIuserDataUnregistered::m_uuid_iso_iec_11578[16] = {
+-    0x2C, 0xA2, 0xDE, 0x09, 0xB5, 0x17, 0x47, 0xDB,
+-    0xBB, 0x55, 0xA4, 0xFE, 0x7F, 0xC2, 0xFC, 0x4E
+-};
+-
+ /* marshal a single SEI message sei, storing the marshalled representation
+ * in bitstream bs */
+ void SEI::writeSEImessages(Bitstream& bs, const SPS& sps, NalUnitType nalUnitType, NALList& list, int isNested)
+diff -ur encoder/sei.h encoder/sei.h
+--- encoder/sei.h	2025-10-04 11:35:42.787846873 +0200
++++ encoder/sei.h	2025-10-02 12:03:17.469699766 +0200
+@@ -83,12 +83,9 @@
+         m_payloadType = USER_DATA_UNREGISTERED;
+         m_payloadSize = 0;
+     }
+-    static const uint8_t m_uuid_iso_iec_11578[ISO_IEC_11578_LEN];
+     uint8_t *m_userData;
+     void writeSEI(const SPS&)
+     {
+-        for (uint32_t i = 0; i < ISO_IEC_11578_LEN; i++)
+-            WRITE_CODE(m_uuid_iso_iec_11578[i], 8, "sei.uuid_iso_iec_11578[i]");
+         for (uint32_t i = 0; i < m_payloadSize; i++)
+             WRITE_CODE(m_userData[i], 8, "user_data");
+     }
 diff -ur test/CMakeLists.txt test/CMakeLists.txt
 --- test/CMakeLists.txt	2024-11-26 19:47:07.433703982 +0100
 +++ test/CMakeLists.txt	2024-11-26 17:45:42.248638745 +0100
