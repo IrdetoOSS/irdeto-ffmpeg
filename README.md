@@ -1,5 +1,5 @@
 # irdeto-ffmpeg
-Based on FFmpeg 4.1 (https://github.com/FFmpeg/FFmpeg/tree/n4.1)
+Based on FFmpeg version 4.1 (https://github.com/FFmpeg/FFmpeg/tree/n4.1)
 
 ## Included third-party components
 - x264 encoder, stable branch (build 164): https://github.com/mirror/x264.git
@@ -22,6 +22,7 @@ The building of the project depends on some third-party components licensed in t
 - Patches in the wrapper of the libaom AV1 encoder
 - Patches in the wrapper of the libaom AV1 decoder
 - Patches in the wrapper of the SRT library (libsrt.c)
+- Patches in x265 encoder to support aarch64 optimizations for high bitdepth
 - Patches in h264 decoder to export necessary metadata from the decoder
 - Patches in h265 decoder to export necessary metadata from the decoder
 - Patches in MP4/MOV demux and remux
@@ -30,7 +31,7 @@ The building of the project depends on some third-party components licensed in t
 - Few helper video filters
 
 ## Build requirements
-The project can be built for wide range of Linux distributions,sSupported ```x86_64``` and ```aarch64``` architectures.
+The project can be built for wide range of Linux distributions, supported ```x86_64``` and ```aarch64``` architectures.
 
 The building was tested for:
 - Ubuntu 24.04 "Noble Numbat" (x86_64)
