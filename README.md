@@ -1,6 +1,12 @@
 # irdeto-ffmpeg
 Based on FFmpeg 4.1 (https://github.com/FFmpeg/FFmpeg/tree/n4.1)
 
+## Included third-party components
+- x264 encoder, stable branch (build 164): https://github.com/mirror/x264.git
+- x265 encoder, release 3.5: https://bitbucket.org/multicoreware/x265_git.git
+- AV1 reference codec (libaom), v3.6.0: https://aomedia.googlesource.com/aom
+- SRT library, v1.5.1: https://github.com/Haivision/srt.git
+
 ## License and legal considerations
 The Irdeto FFmpeg project is based on FFmpeg sources and follows FFmpeg License and Legal Considerations (https://www.ffmpeg.org/legal.html)
 
@@ -24,39 +30,22 @@ The building of the project depends on some third-party components licensed in t
 - Few helper video filters
 
 ## Build requirements
+The project can be built for wide range of Linux distributions,sSupported ```x86_64``` and ```aarch64``` architectures.
+
+The building was tested for:
+- Ubuntu 24.04 "Noble Numbat" (x86_64)
+- Amazon Linux 2023 (x86_64)
+- Amazon Linux 2023 (aarch64)
+
 To build this project, folowing tools and libraries are reqired:
 
 ### RedHat-family distributions
 
-    git
-    gcc
-    gcc-c++
-    nasm
-    tcl
-    cmake
-    make
-    patch
-    pkgconfig
-    check-devel
-    openjpeg2-devel
-    openssl-devel
-    libxml2-devel
+    sudo dnf install -y git gcc gcc-c++ nasm tcl cmake make patch pkgconfig check-devel openjpeg2-devel openssl-devel libxml2-devel
 
 ### Debian-family distributions
 
-    git
-    gcc
-    g++
-    nasm
-    tcl
-    cmake
-    make
-    patch
-    pkg-config
-    check
-    libopenjp2-7-dev
-    libssl-dev
-    libxml2-dev
+    sudo apt-get install -y git gcc g++ nasm tcl cmake make patch pkg-config check libopenjp2-7-dev libssl-dev libxml2-dev
 
 ## Build
 To build this project, please run:
@@ -72,7 +61,7 @@ To build this project, please run:
     cd build
     cmake ..
     make
-    make install
+    sudo make install
 
 ## Unit tests
 To execute unit tests, please run:
